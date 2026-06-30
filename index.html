@@ -234,7 +234,6 @@
           <button class="toggle-btn" id="btn-cad-sim" onclick="setCadeira('sim')">Sim</button>
           <button class="toggle-btn" id="btn-cad-nao" onclick="setCadeira('nao')">Não</button>
         </div>
-        <div class="cadeira-info" id="cadeira-info" style="display:none">Valor da 2ª cadeira: <span id="val-cadeira">R$ 0</span></div>
       </div>
 
       <div class="divider"></div>
@@ -299,7 +298,7 @@
     <div class="field"><label>E-mail do cliente</label><input type="email" id="edit-email" inputmode="email"></div>
     <div class="field"><label>Telefone / WhatsApp</label><input type="tel" id="edit-telefone" inputmode="tel"></div>
     <div class="field"><label>Data da venda</label><input type="date" id="edit-data"></div>
-    <div class="field"><label>Valor da venda (R$)</label><input type="number" id="edit-valor" inputmode="decimal" oninput="editCalcCadeira()"></div>
+    <div class="field"><label>Valor da venda (R$)</label><input type="number" id="edit-valor" inputmode="decimal"></div>
     <div class="divider"></div><div class="section-label">2ª Cadeira</div>
     <div class="cadeira-box field">
       <label style="margin-bottom:8px">2ª cadeira? <span style="color:var(--bx-green-light);font-size:11px">(+0,5 pt)</span></label>
@@ -307,7 +306,6 @@
         <button class="toggle-btn" id="edit-cad-sim" onclick="editSetCadeira('sim')">Sim</button>
         <button class="toggle-btn" id="edit-cad-nao" onclick="editSetCadeira('nao')">Não</button>
       </div>
-      <div class="cadeira-info" id="edit-cadeira-info" style="display:none">Valor: <span id="edit-val-cadeira">R$ 0</span></div>
     </div>
     <div class="divider"></div><div class="section-label">Recebimento</div>
     <div class="field"><label>Faixa de recebimento</label>
@@ -498,10 +496,7 @@ window.setCadeira=function(val){
   stateCadeira=val;
   document.getElementById('btn-cad-sim').className='toggle-btn'+(val==='sim'?' sel-sim':'');
   document.getElementById('btn-cad-nao').className='toggle-btn'+(val==='nao'?' sel-nao':'');
-  const v=parseFloat(document.getElementById('inp-valor').value)||0;
-  const ci=document.getElementById('cadeira-info');
-  if(val==='sim'){ci.style.display='block';document.getElementById('val-cadeira').textContent=fmtVal(v*.5);}
-  else ci.style.display='none';
+
   calcPts();
 };
 window.setToggleRc=function(val){
@@ -512,7 +507,6 @@ window.setToggleRc=function(val){
   calcPts();
 };
 window.calcPts=function(){
-  if(stateCadeira==='sim'){const v=parseFloat(document.getElementById('inp-valor').value)||0;document.getElementById('val-cadeira').textContent=fmtVal(v*.5);}
   const p=getPts(stateFaixa,stateRc,stateCadeira);
   document.getElementById('pts-preview').textContent=fmtPts(p.total);
   applyDot('r1',true);applyDot('r2',p.r2);applyDot('r3',p.r3);applyDot('r4',p.r4);
@@ -565,7 +559,6 @@ function resetForm(){
   [0,1,2].forEach(i=>document.getElementById('faixa-'+i).className='faixa-btn');
   ['btn-rc-sim','btn-rc-nao','btn-cad-sim','btn-cad-nao'].forEach(id=>document.getElementById(id).className='toggle-btn');
   document.getElementById('resto-box').className='resto-box';
-  document.getElementById('cadeira-info').style.display='none';
   document.getElementById('pts-preview').textContent='0';
   applyDot('r1',false);applyDot('r2',false);applyDot('r3',false);applyDot('r4',false);
 }
@@ -665,9 +658,7 @@ window.abrirEdicao=function(id){
   document.getElementById('edit-resto-box').className='resto-box'+(editRc==='nao'?' show':'');
   document.getElementById('edit-cad-sim').className ='toggle-btn'+(editCadeira==='sim'?' sel-sim':'');
   document.getElementById('edit-cad-nao').className ='toggle-btn'+(editCadeira==='nao'?' sel-nao':'');
-  const ci=document.getElementById('edit-cadeira-info');
-  if(editCadeira==='sim'){ci.style.display='block';document.getElementById('edit-val-cadeira').textContent=fmtVal(v.valor*.5);}
-  else ci.style.display='none';
+
   document.getElementById('modal-overlay').classList.add('open');
 };
 window.fecharModal=function(e){if(e.target.id==='modal-overlay')closeModal();};
@@ -684,12 +675,7 @@ window.editSetCadeira=function(val){
   document.getElementById('edit-cad-sim').className='toggle-btn'+(val==='sim'?' sel-sim':'');
   document.getElementById('edit-cad-nao').className='toggle-btn'+(val==='nao'?' sel-nao':'');
   const v=parseFloat(document.getElementById('edit-valor').value)||0;
-  const ci=document.getElementById('edit-cadeira-info');
-  if(val==='sim'){ci.style.display='block';document.getElementById('edit-val-cadeira').textContent=fmtVal(v*.5);}
-  else ci.style.display='none';
-};
-window.editCalcCadeira=function(){
-  if(editCadeira==='sim'){const v=parseFloat(document.getElementById('edit-valor').value)||0;document.getElementById('edit-val-cadeira').textContent=fmtVal(v*.5);}
+
 };
 window.salvarEdicao=async function(){
   if(editFaixa===null){alert('Selecione a faixa.');return;}
