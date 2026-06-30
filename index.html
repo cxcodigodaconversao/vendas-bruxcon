@@ -18,16 +18,12 @@
     html,body{height:100%;background:var(--bx-bg);color:var(--bx-text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.5;overscroll-behavior:none;}
     .app{display:flex;flex-direction:column;min-height:100dvh;max-width:480px;margin:0 auto;}
 
-    /* ── AUTH SCREEN ── */
     .auth-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:24px;background:var(--bx-bg);}
     .auth-logo{margin-bottom:24px;text-align:center;}
-    .auth-logo .header-title{font-size:28px;font-weight:700;color:var(--bx-green-light);}
-    .auth-logo .header-sub{font-size:11px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;}
+    .auth-logo .at{font-size:28px;font-weight:700;color:var(--bx-green-light);}
+    .auth-logo .as{font-size:11px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;}
     .auth-card{background:var(--bx-card);border:1px solid var(--bx-border);border-radius:14px;padding:24px;width:100%;max-width:400px;}
-    .auth-title{font-size:16px;font-weight:700;color:var(--bx-text);margin-bottom:18px;text-align:center;}
-    .auth-tabs{display:flex;gap:0;margin-bottom:20px;border:1px solid var(--bx-border);border-radius:8px;overflow:hidden;}
-    .auth-tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:600;color:var(--bx-muted);cursor:pointer;border:none;background:transparent;font-family:inherit;}
-    .auth-tab.active{background:var(--bx-green);color:#0a1a0f;}
+    .auth-title{font-size:15px;font-weight:700;color:var(--bx-text);margin-bottom:18px;text-align:center;}
     .auth-field{margin-bottom:14px;}
     .auth-field label{display:block;font-size:11px;font-weight:600;color:var(--bx-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em;}
     .auth-field input{width:100%;padding:12px 14px;border:1px solid var(--bx-border);border-radius:8px;background:var(--bx-card2);color:var(--bx-text);font-size:15px;font-family:inherit;}
@@ -36,36 +32,34 @@
     .auth-error{font-size:12px;color:#e74c3c;margin-bottom:10px;text-align:center;min-height:18px;}
     .auth-btn{width:100%;padding:14px;border-radius:8px;border:none;background:var(--bx-green);color:#0a1a0f;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;}
     .auth-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .auth-hint{font-size:12px;color:var(--bx-muted);text-align:center;margin-top:14px;line-height:1.5;}
+    .auth-hint span{color:var(--bx-green-light);}
 
-    /* ── HEADER ── */
     .header{background:var(--bx-bg);padding:12px 14px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bx-border);position:sticky;top:0;z-index:10;}
     .header-title{font-size:18px;font-weight:600;color:var(--bx-green-light);letter-spacing:.03em;}
     .header-sub{font-size:10px;color:var(--bx-muted);letter-spacing:.08em;text-transform:uppercase;}
     .header-user{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
     .user-name{font-size:11px;color:var(--bx-muted);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .adm-badge{font-size:9px;font-weight:700;background:var(--bx-green-dark);color:var(--bx-green-light);padding:2px 6px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em;}
+    .adm-badge{font-size:9px;font-weight:700;background:var(--bx-green-dark);color:var(--bx-green-light);padding:2px 6px;border-radius:10px;text-transform:uppercase;}
     .logout-btn{background:none;border:1px solid var(--bx-border);border-radius:6px;color:var(--bx-muted);font-size:11px;cursor:pointer;padding:5px 8px;font-family:inherit;}
-    .sync-dot{width:7px;height:7px;border-radius:50%;background:#666;flex-shrink:0;}
+    .sync-dot{width:7px;height:7px;border-radius:50%;background:#555;flex-shrink:0;}
     .sync-dot.ok{background:var(--bx-green);}
     .sync-dot.err{background:#e74c3c;}
 
-    /* ── TABS ── */
     .tab-row{display:flex;background:var(--bx-bg);border-bottom:1px solid var(--bx-border);position:sticky;top:55px;z-index:10;}
-    .tab{flex:1;padding:10px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--bx-muted);cursor:pointer;border:none;background:transparent;font-family:inherit;letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;}
+    .tab{flex:1;padding:10px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--bx-muted);cursor:pointer;border:none;background:transparent;font-family:inherit;letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid transparent;}
     .tab.active{color:var(--bx-green-light);border-bottom-color:var(--bx-green);}
 
-    /* ── SCREENS ── */
     .screen{display:none;padding:12px 12px calc(12px + var(--safe-bottom));flex:1;}
     .screen.active{display:block;}
 
-    /* ── CARDS / FIELDS ── */
     .card{background:var(--bx-card);border:1px solid var(--bx-border);border-radius:12px;padding:16px;margin-bottom:12px;}
     .section-label{font-size:10px;font-weight:700;color:var(--bx-green);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;}
     .divider{height:1px;background:var(--bx-border);margin:4px 0 14px;}
     .field{margin-bottom:14px;}
     .field:last-child{margin-bottom:0;}
     .field label{display:block;font-size:11px;font-weight:600;color:var(--bx-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;}
-    input,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--bx-border);border-radius:8px;background:var(--bx-card2);color:var(--bx-text);font-size:16px;font-family:inherit;appearance:none;-webkit-appearance:none;transition:border-color .15s;}
+    input,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--bx-border);border-radius:8px;background:var(--bx-card2);color:var(--bx-text);font-size:16px;font-family:inherit;appearance:none;-webkit-appearance:none;}
     input::placeholder,textarea::placeholder{color:var(--bx-muted);opacity:.6;}
     input:focus,select:focus,textarea:focus{outline:none;border-color:var(--bx-green);box-shadow:0 0 0 3px rgba(46,204,113,.15);}
     select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237aab88' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
@@ -137,6 +131,7 @@
     .sale-detail{font-size:13px;color:var(--bx-muted);line-height:1.7;}
     .sale-detail strong{color:var(--bx-text);}
     .nego-tag{display:inline-block;background:rgba(46,204,113,.08);border:1px solid var(--bx-green-dark);color:var(--bx-green);font-size:12px;padding:3px 8px;border-radius:6px;margin-top:4px;line-height:1.5;word-break:break-word;}
+    .mine-badge{font-size:10px;background:rgba(46,204,113,.1);border:1px solid var(--bx-green-dark);color:var(--bx-green);padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle;}
 
     .sale-actions{display:flex;gap:8px;margin-top:8px;}
     .btn-edit{flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--bx-border);background:transparent;color:var(--bx-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;}
@@ -149,7 +144,7 @@
     .modal-close{background:none;border:none;color:var(--bx-muted);font-size:22px;cursor:pointer;line-height:1;padding:0 4px;}
     .modal .field{margin-bottom:12px;}
 
-    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(10,26,15,.85);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(10,26,15,.88);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
     .loading-overlay.show{display:flex;}
     .spinner{width:36px;height:36px;border:3px solid var(--bx-border);border-top-color:var(--bx-green);border-radius:50%;animation:spin .7s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg);}}
@@ -158,62 +153,42 @@
     .empty{text-align:center;color:var(--bx-muted);font-size:14px;padding:2.5rem 0;}
     .danger-btn{background:none;border:none;color:#c0392b;font-size:13px;cursor:pointer;font-family:inherit;padding:10px 0;display:block;margin:0 auto;}
     .card-title{font-size:11px;font-weight:700;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;}
-    .mine-badge{font-size:10px;background:rgba(46,204,113,.1);border:1px solid var(--bx-green-dark);color:var(--bx-green);padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle;}
   </style>
 </head>
 <body>
 
-<!-- ══════════════ TELA DE LOGIN ══════════════ -->
+<!-- ══ TELA DE LOGIN ══ -->
 <div id="auth-screen" class="auth-screen">
   <div class="auth-logo">
-    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="48" height="48" style="margin-bottom:10px">
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="52" height="52" style="margin-bottom:10px">
       <rect width="40" height="40" rx="7" fill="#0a1a0f"/>
       <polygon points="8,8 20,8 20,14 14,14 14,20 8,20" fill="#2ecc71"/>
       <polygon points="20,20 26,20 26,26 32,26 32,32 20,32" fill="#2ecc71"/>
       <rect x="20" y="8" width="12" height="6" rx="1" fill="#1a8a45"/>
       <rect x="8" y="26" width="12" height="6" rx="1" fill="#1a8a45"/>
     </svg>
-    <div class="header-title">bruxcon</div>
-    <div class="header-sub">International Bruxism Convention</div>
+    <div class="at">bruxcon</div>
+    <div class="as">International Bruxism Convention</div>
   </div>
-
   <div class="auth-card">
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Entrar</button>
-      <button class="auth-tab" id="tab-cadastro" onclick="showAuthTab('cadastro')">Criar conta</button>
+    <div class="auth-title">Entrar no sistema</div>
+    <div class="auth-field">
+      <label>E-mail</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" inputmode="email" autocomplete="email">
     </div>
-
-    <!-- LOGIN -->
-    <div id="form-login">
-      <div class="auth-field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" inputmode="email" autocomplete="email"></div>
-      <div class="auth-field"><label>Senha</label><input type="password" id="login-senha" placeholder="Sua senha" autocomplete="current-password"></div>
-      <div class="auth-error" id="login-error"></div>
-      <button class="auth-btn" id="btn-login" onclick="fazerLogin()">Entrar</button>
+    <div class="auth-field">
+      <label>Senha</label>
+      <input type="password" id="login-senha" placeholder="Sua senha" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')fazerLogin()">
     </div>
-
-    <!-- CADASTRO -->
-    <div id="form-cadastro" style="display:none">
-      <div class="auth-field"><label>Seu nome (closer)</label>
-        <select id="cad-nome">
-          <option value="">Selecionar...</option>
-          <option>Everton</option><option>Jezrrel</option><option>Renato</option>
-          <option>Ana Luiza</option><option>Ani Caroline</option><option>Bruna</option>
-          <option>Gabriel Aduati</option><option>Gabriel Jesus</option>
-          <option>Mila</option><option>Rodrigo</option><option>Willy</option>
-        </select>
-      </div>
-      <div class="auth-field"><label>E-mail</label><input type="email" id="cad-email" placeholder="seu@email.com" inputmode="email" autocomplete="email"></div>
-      <div class="auth-field"><label>Senha</label><input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
-      <div class="auth-field"><label>Confirmar senha</label><input type="password" id="cad-senha2" placeholder="Repita a senha" autocomplete="new-password"></div>
-      <div class="auth-error" id="cad-error"></div>
-      <button class="auth-btn" id="btn-cad" onclick="fazerCadastro()">Criar conta</button>
-    </div>
+    <div class="auth-error" id="login-error"></div>
+    <button class="auth-btn" id="btn-login" onclick="fazerLogin()">Entrar</button>
+    <div class="auth-hint">Senha padrão: <span>Bruxcon@2025</span><br>Você pode trocar após o primeiro acesso.</div>
   </div>
 </div>
 
-<!-- ══════════════ APP PRINCIPAL ══════════════ -->
+<!-- ══ APP PRINCIPAL ══ -->
 <div class="app" id="main-app" style="display:none">
-
   <div class="header">
     <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="32" height="32" style="flex-shrink:0">
       <rect width="40" height="40" rx="7" fill="#0a1a0f"/>
@@ -246,7 +221,7 @@
       <div class="product-badge">DTC Master</div>
       <div class="section-label">Dados da venda</div>
       <div class="field"><label>Cliente</label><input type="text" id="inp-cliente" placeholder="Nome completo" autocomplete="off"></div>
-      <div class="field"><label>E-mail</label><input type="email" id="inp-email" placeholder="email@exemplo.com" inputmode="email" autocomplete="off"></div>
+      <div class="field"><label>E-mail do cliente</label><input type="email" id="inp-email" placeholder="email@exemplo.com" inputmode="email" autocomplete="off"></div>
       <div class="field"><label>Telefone / WhatsApp</label><input type="tel" id="inp-telefone" placeholder="(00) 00000-0000" inputmode="tel" autocomplete="off"></div>
       <div class="field"><label>Data da venda</label><input type="date" id="inp-data"></div>
       <div class="field"><label>Valor da venda (R$)</label><input type="number" id="inp-valor" placeholder="0" inputmode="decimal" oninput="calcPts()"></div>
@@ -321,7 +296,7 @@
   <div class="modal">
     <div class="modal-title">Editar venda<button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="field"><label>Cliente</label><input type="text" id="edit-cliente" autocomplete="off"></div>
-    <div class="field"><label>E-mail</label><input type="email" id="edit-email" inputmode="email"></div>
+    <div class="field"><label>E-mail do cliente</label><input type="email" id="edit-email" inputmode="email"></div>
     <div class="field"><label>Telefone / WhatsApp</label><input type="tel" id="edit-telefone" inputmode="tel"></div>
     <div class="field"><label>Data da venda</label><input type="date" id="edit-data"></div>
     <div class="field"><label>Valor da venda (R$)</label><input type="number" id="edit-valor" inputmode="decimal" oninput="editCalcCadeira()"></div>
@@ -366,12 +341,11 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
-  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, onAuthStateChanged, updateProfile
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, onSnapshot, doc,
-  updateDoc, deleteDoc, query, orderBy, setDoc, getDoc
+  updateDoc, deleteDoc, query, orderBy
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -383,14 +357,30 @@ const firebaseConfig = {
   appId: "1:315795829124:web:69890b2f0eb7340660edd1"
 };
 
+// ── MAPA EMAIL → CLOSER ────────────────────────────────
+// Fonte da verdade: e-mail define nome e permissão
+const EMAIL_MAP = {
+  'everton@comercial10x.com.br':       { nome: 'Everton',       adm: true  },
+  'jezreel@comercial10x.com.br':       { nome: 'Jezrrel',       adm: true  },
+  'willysc7@gmail.com':                { nome: 'Willy',         adm: false },
+  'comercial1@comercial10x.com.br':    { nome: 'Renato',        adm: false },
+  'especialista1@comercial10x.com.br': { nome: 'Bruna',         adm: false },
+  'especialista2@comercial10x.com.br': { nome: 'Gabriel Jesus', adm: false },
+  'especialista5@comercial10x.com.br': { nome: 'Gabriel Aduati',adm: false },
+  'especialista3@comercial10x.com.br': { nome: 'Mila',          adm: false },
+  'especialista4@comercial10x.com.br': { nome: 'Rodrigo',       adm: false },
+  'a.caroline2396@gmail.com':          { nome: 'Ani Caroline',  adm: false },
+  'especialista6@comercial10x.com.br': { nome: 'Ana Luiza',     adm: false },
+};
+
+const CLOSERS = ['Everton','Jezrrel','Renato','Ana Luiza','Ani Caroline','Bruna',
+                 'Gabriel Aduati','Gabriel Jesus','Mila','Rodrigo','Willy'];
+const FAIXA_LABELS = ['Abaixo de R$ 15.000','R$ 15.000 até R$ 29.996','Acima de R$ 29.997'];
+
 const fbApp = initializeApp(firebaseConfig);
 const auth  = getAuth(fbApp);
 const db    = getFirestore(fbApp);
 const col   = collection(db, 'vendas');
-
-// ── ADMs ───────────────────────────────────────────────
-const ADM_NOMES = ['everton', 'jezrrel'];
-function isAdm(nome) { return ADM_NOMES.includes((nome||'').toLowerCase().trim()); }
 
 // ── ESTADO ─────────────────────────────────────────────
 let vendas=[], currentUser=null, currentNome='', currentIsAdm=false;
@@ -398,29 +388,32 @@ let stateFaixa=null, stateRc=null, stateCadeira=null;
 let editFaixa=null,  editRc=null,  editCadeira=null, editDocId=null;
 let unsubVendas=null;
 
-const CLOSERS=['Everton','Jezrrel','Renato','Ana Luiza','Ani Caroline','Bruna','Gabriel Aduati','Gabriel Jesus','Mila','Rodrigo','Willy'];
-const FAIXA_LABELS=['Abaixo de R$ 15.000','R$ 15.000 até R$ 29.996','Acima de R$ 29.997'];
-
 // ── UTILS ──────────────────────────────────────────────
 const fmtVal = v => 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtPts = n => n%1===0?n.toString():n.toFixed(1);
-function getPts(faixa,completo,cadeira){
-  const r2=faixa!==null&&faixa>=1, r3=completo==='sim', r4=cadeira==='sim';
+function getPts(f,c,cad){
+  const r2=f!==null&&f>=1, r3=c==='sim', r4=cad==='sim';
   return{total:1+(r2?1:0)+(r3?1:0)+(r4?.5:0),r2,r3,r4};
 }
 function showLoad(t=''){document.getElementById('loading-txt').textContent=t;document.getElementById('loading-overlay').classList.add('show');}
 function hideLoad(){document.getElementById('loading-overlay').classList.remove('show');}
-function setSyncDot(s){const e=document.getElementById('sync-dot');e.className='sync-dot '+s;}
+function setSyncDot(s){document.getElementById('sync-dot').className='sync-dot '+s;}
 
 // ── AUTH STATE ─────────────────────────────────────────
 showLoad('Verificando sessão...');
-onAuthStateChanged(auth, async user => {
+onAuthStateChanged(auth, user => {
   if (user) {
-    currentUser = user;
-    // Buscar nome do perfil no Firestore
-    const snap = await getDoc(doc(db,'usuarios',user.uid));
-    currentNome = snap.exists() ? snap.data().nome : (user.displayName||'');
-    currentIsAdm = isAdm(currentNome);
+    const email = (user.email||'').toLowerCase().trim();
+    const perfil = EMAIL_MAP[email];
+    if (!perfil) {
+      // E-mail não reconhecido
+      signOut(auth);
+      document.getElementById('login-error').textContent = 'E-mail não autorizado neste sistema.';
+      mostrarAuth(); hideLoad(); return;
+    }
+    currentUser  = user;
+    currentNome  = perfil.nome;
+    currentIsAdm = perfil.adm;
     mostrarApp();
     iniciarListener();
   } else {
@@ -443,21 +436,14 @@ function mostrarAuth(){
   document.getElementById('main-app').style.display='none';
 }
 
-// ── AUTH TABS ──────────────────────────────────────────
-window.showAuthTab = function(t){
-  document.getElementById('form-login').style.display   = t==='login'?'block':'none';
-  document.getElementById('form-cadastro').style.display= t==='cadastro'?'block':'none';
-  document.getElementById('tab-login').className   = 'auth-tab'+(t==='login'?' active':'');
-  document.getElementById('tab-cadastro').className= 'auth-tab'+(t==='cadastro'?' active':'');
-};
-
 // ── LOGIN ──────────────────────────────────────────────
 window.fazerLogin = async function(){
-  const email=document.getElementById('login-email').value.trim();
+  const email=document.getElementById('login-email').value.trim().toLowerCase();
   const senha=document.getElementById('login-senha').value;
   const errEl=document.getElementById('login-error');
   errEl.textContent='';
   if(!email||!senha){errEl.textContent='Preencha e-mail e senha.';return;}
+  if(!EMAIL_MAP[email]){errEl.textContent='E-mail não autorizado neste sistema.';return;}
   const btn=document.getElementById('btn-login');
   btn.disabled=true; showLoad('Entrando...');
   try{
@@ -468,34 +454,7 @@ window.fazerLogin = async function(){
   }
 };
 
-// ── CADASTRO ───────────────────────────────────────────
-window.fazerCadastro = async function(){
-  const nome  =document.getElementById('cad-nome').value;
-  const email =document.getElementById('cad-email').value.trim();
-  const senha =document.getElementById('cad-senha').value;
-  const senha2=document.getElementById('cad-senha2').value;
-  const errEl =document.getElementById('cad-error');
-  errEl.textContent='';
-  if(!nome){errEl.textContent='Selecione seu nome.';return;}
-  if(!email){errEl.textContent='Informe o e-mail.';return;}
-  if(senha.length<6){errEl.textContent='Senha deve ter pelo menos 6 caracteres.';return;}
-  if(senha!==senha2){errEl.textContent='As senhas não coincidem.';return;}
-  const btn=document.getElementById('btn-cad');
-  btn.disabled=true; showLoad('Criando conta...');
-  try{
-    const cred=await createUserWithEmailAndPassword(auth,email,senha);
-    await updateProfile(cred.user,{displayName:nome});
-    await setDoc(doc(db,'usuarios',cred.user.uid),{nome,email,criadoEm:Date.now()});
-  }catch(e){
-    hideLoad(); btn.disabled=false;
-    errEl.textContent=traduzirErro(e.code);
-  }
-};
-
-// ── LOGOUT ─────────────────────────────────────────────
-window.fazerLogout = async function(){
-  await signOut(auth);
-};
+window.fazerLogout = async function(){ await signOut(auth); };
 
 function traduzirErro(code){
   const m={
@@ -503,11 +462,9 @@ function traduzirErro(code){
     'auth/user-not-found':'Usuário não encontrado.',
     'auth/wrong-password':'Senha incorreta.',
     'auth/invalid-credential':'E-mail ou senha incorretos.',
-    'auth/email-already-in-use':'Este e-mail já está cadastrado.',
-    'auth/weak-password':'Senha muito fraca.',
     'auth/too-many-requests':'Muitas tentativas. Tente mais tarde.'
   };
-  return m[code]||'Erro: '+code;
+  return m[code]||'Erro ao entrar. Tente novamente.';
 }
 
 // ── LISTENER FIRESTORE ─────────────────────────────────
@@ -518,7 +475,7 @@ function iniciarListener(){
     setSyncDot('ok');
     renderRanking();
     if(document.getElementById('tab-vendas').classList.contains('active')) renderVendas();
-  }, err=>{ console.error(err); setSyncDot('err'); });
+  }, ()=>setSyncDot('err'));
 }
 
 // ── TABS ───────────────────────────────────────────────
@@ -567,7 +524,7 @@ function applyDot(id,on){
 
 // ── REGISTRAR ──────────────────────────────────────────
 window.registrar=async function(){
-  if(!currentUser){alert('Você precisa estar logado.');return;}
+  if(!currentUser){alert('Sessão expirada. Faça login novamente.');return;}
   const cliente =document.getElementById('inp-cliente').value.trim();
   const email   =document.getElementById('inp-email').value.trim();
   const telefone=document.getElementById('inp-telefone').value.trim();
@@ -585,7 +542,7 @@ window.registrar=async function(){
   const now=new Date();
   const hora=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
   const venda={
-    closer:currentNome, uid:currentUser.uid,
+    closer:currentNome, uid:currentUser.uid, emailCloser:currentUser.email,
     cliente,email,telefone,dataVenda:dataV,produto:'DTC Master',
     valor,recebido,faixa:stateFaixa,faixaLabel:FAIXA_LABELS[stateFaixa],
     cadeira:stateCadeira,valorCadeira:stateCadeira==='sim'?valor*.5:0,
@@ -598,11 +555,12 @@ window.registrar=async function(){
     await addDoc(col,venda);
     resetForm(); hideLoad(); btn.disabled=false;
     alert('✓ Venda registrada!\n+'+fmtPts(p.total)+' ponto'+(p.total!==1?'s':'')+' para '+currentNome);
-  }catch(e){hideLoad();alert('Erro: '+e.message);}
+  }catch(e){hideLoad();document.getElementById('btn-registrar').disabled=false;alert('Erro: '+e.message);}
 };
 
 function resetForm(){
-  ['inp-cliente','inp-email','inp-telefone','inp-data','inp-valor','inp-recebido','inp-restante','inp-negociacao'].forEach(id=>document.getElementById(id).value='');
+  ['inp-cliente','inp-email','inp-telefone','inp-data','inp-valor','inp-recebido','inp-restante','inp-negociacao']
+    .forEach(id=>document.getElementById(id).value='');
   stateFaixa=null;stateRc=null;stateCadeira=null;
   [0,1,2].forEach(i=>document.getElementById('faixa-'+i).className='faixa-btn');
   ['btn-rc-sim','btn-rc-nao','btn-cad-sim','btn-cad-nao'].forEach(id=>document.getElementById(id).className='toggle-btn');
@@ -618,8 +576,8 @@ function renderRanking(){
   CLOSERS.forEach(c=>{totals[c]={pts:0,vendas:0,vol:0,recebido:0};});
   vendas.forEach(v=>{
     if(totals[v.closer]){
-      totals[v.closer].pts+=v.pts;totals[v.closer].vendas+=1;
-      totals[v.closer].vol+=v.valor;totals[v.closer].recebido+=(v.recebido||0);
+      totals[v.closer].pts+=v.pts; totals[v.closer].vendas+=1;
+      totals[v.closer].vol+=v.valor; totals[v.closer].recebido+=(v.recebido||0);
     }
   });
   const sorted=Object.entries(totals).sort((a,b)=>b[1].pts-a[1].pts||b[1].recebido-a[1].recebido);
@@ -647,20 +605,14 @@ function renderRanking(){
 // ── HISTÓRICO ──────────────────────────────────────────
 function renderVendas(){
   const el=document.getElementById('vendas-list');
-  if(!vendas.length){el.innerHTML='<div class="empty">Nenhuma venda ainda</div>';return;}
-
-  // closer vê só as suas; adm vê todas
-  const lista = currentIsAdm ? vendas : vendas.filter(v=>v.uid===currentUser.uid);
-  if(!lista.length){el.innerHTML='<div class="empty">Você ainda não registrou vendas</div>';return;}
-
+  const lista=currentIsAdm?vendas:vendas.filter(v=>v.uid===currentUser.uid);
+  if(!lista.length){el.innerHTML=`<div class="empty">${currentIsAdm?'Nenhuma venda ainda':'Você ainda não registrou vendas'}</div>`;return;}
   el.innerHTML=lista.map(v=>{
-    const isMine = v.uid===currentUser.uid;
-    const podeEditar = currentIsAdm || isMine;
-    const podeExcluir = currentIsAdm;
-    return `
-    <div class="sale-item">
+    const isMine=v.uid===currentUser.uid;
+    const podeEditar=currentIsAdm||isMine;
+    return`<div class="sale-item">
       <div class="sale-header">
-        <span class="sale-closer">${v.closer}${isMine?'<span class="mine-badge">minha</span>':''}</span>
+        <span class="sale-closer">${v.closer}${isMine&&!currentIsAdm?'<span class="mine-badge">minha</span>':''}</span>
         <span class="sale-pts-badge">+${fmtPts(v.pts)} pt${v.pts!==1?'s':''}</span>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
@@ -677,16 +629,15 @@ function renderVendas(){
         ${v.r4?` · <span style="color:var(--bx-green-light)">✓ 2ª cadeira (${fmtVal(v.valorCadeira||0)})</span>`:''}
         ${v.negociacao?`<br><span class="nego-tag">Restante ${fmtVal(v.restante)}: ${v.negociacao}</span>`:''}
       </div>
-      ${podeEditar||podeExcluir?`
-      <div class="sale-actions">
-        ${podeEditar?`<button class="btn-edit" onclick="abrirEdicao('${v._id}')">✏️ Editar</button>`:''}
-        ${podeExcluir?`<button class="btn-del" onclick="excluirVenda('${v._id}','${v.cliente}')">🗑️</button>`:''}
+      ${podeEditar?`<div class="sale-actions">
+        <button class="btn-edit" onclick="abrirEdicao('${v._id}')">✏️ Editar</button>
+        ${currentIsAdm?`<button class="btn-del" onclick="excluirVenda('${v._id}','${v.cliente}')">🗑️</button>`:''}
       </div>`:''}
     </div>`;
   }).join('');
 }
 
-// ── EXCLUIR (só ADM) ───────────────────────────────────
+// ── EXCLUIR ────────────────────────────────────────────
 window.excluirVenda=async function(id,nome){
   if(!currentIsAdm){alert('Sem permissão.');return;}
   if(!confirm(`Excluir venda de "${nome}"?`))return;
@@ -698,16 +649,15 @@ window.excluirVenda=async function(id,nome){
 window.abrirEdicao=function(id){
   const v=vendas.find(x=>x._id===id);
   if(!v)return;
-  // Verificar permissão
-  if(!currentIsAdm && v.uid!==currentUser.uid){alert('Você só pode editar suas próprias vendas.');return;}
+  if(!currentIsAdm&&v.uid!==currentUser.uid){alert('Você só pode editar suas próprias vendas.');return;}
   editDocId=id;editFaixa=v.faixa;editRc=v.completo;editCadeira=v.cadeira||'nao';
-  document.getElementById('edit-cliente').value  =v.cliente;
-  document.getElementById('edit-email').value    =v.email||'';
-  document.getElementById('edit-telefone').value =v.telefone||'';
-  document.getElementById('edit-data').value     =v.dataVenda||'';
-  document.getElementById('edit-valor').value    =v.valor;
-  document.getElementById('edit-recebido').value =v.recebido||0;
-  document.getElementById('edit-restante').value =v.restante||0;
+  document.getElementById('edit-cliente').value   =v.cliente;
+  document.getElementById('edit-email').value     =v.email||'';
+  document.getElementById('edit-telefone').value  =v.telefone||'';
+  document.getElementById('edit-data').value      =v.dataVenda||'';
+  document.getElementById('edit-valor').value     =v.valor;
+  document.getElementById('edit-recebido').value  =v.recebido||0;
+  document.getElementById('edit-restante').value  =v.restante||0;
   document.getElementById('edit-negociacao').value=v.negociacao||'';
   [0,1,2].forEach(i=>document.getElementById('edit-faixa-'+i).className='faixa-btn'+(i===editFaixa?' sel':''));
   document.getElementById('edit-rc-sim').className  ='toggle-btn'+(editRc==='sim'?' sel-sim':'');
