@@ -434,6 +434,21 @@
       </div>
 
       <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="inp-email" placeholder="email@exemplo.com" autocomplete="off" inputmode="email">
+      </div>
+
+      <div class="field">
+        <label>Telefone / WhatsApp</label>
+        <input type="tel" id="inp-telefone" placeholder="(00) 00000-0000" autocomplete="off" inputmode="tel">
+      </div>
+
+      <div class="field">
+        <label>Data da venda</label>
+        <input type="date" id="inp-data">
+      </div>
+
+      <div class="field">
         <label>Valor da venda (R$)</label>
         <input type="number" id="inp-valor" placeholder="0" inputmode="decimal" oninput="calcPts()">
       </div>
@@ -609,6 +624,9 @@
     const closer   = document.getElementById('sel-closer').value;
     const cliente  = document.getElementById('inp-cliente').value.trim();
     const valor    = parseFloat(document.getElementById('inp-valor').value) || 0;
+    const email    = document.getElementById('inp-email').value.trim();
+    const telefone = document.getElementById('inp-telefone').value.trim();
+    const dataVenda= document.getElementById('inp-data').value;
     const recebido = parseFloat(document.getElementById('inp-recebido').value) || 0;
 
     if (!closer)  { alert('Selecione o closer.'); return; }
@@ -624,7 +642,7 @@
     const hora        = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
 
     vendas.push({
-      id: Date.now(), closer, cliente, produto: 'DTC Master',
+      id: Date.now(), closer, cliente, email, telefone, dataVenda, produto: 'DTC Master',
       valor, recebido, faixa: stateFaixa, faixaLabel: FAIXA_LABELS[stateFaixa],
       completo: stateRc, restante, negociacao,
       pts: p.total, r2: p.r2, r3: p.r3, hora
@@ -638,6 +656,9 @@
   function resetForm() {
     document.getElementById('sel-closer').value      = '';
     document.getElementById('inp-cliente').value     = '';
+    document.getElementById('inp-email').value       = '';
+    document.getElementById('inp-telefone').value    = '';
+    document.getElementById('inp-data').value        = '';
     document.getElementById('inp-valor').value       = '';
     document.getElementById('inp-recebido').value    = '';
     document.getElementById('inp-restante').value    = '';
@@ -713,6 +734,9 @@
           <span class="sale-hora">${v.hora}</span>
         </div>
         <div class="sale-detail">
+          ${v.email ? `<span style="color:var(--bx-muted)">${v.email}</span><br>` : ''}
+          ${v.telefone ? `<span style="color:var(--bx-muted)">${v.telefone}</span>` : ''}
+          ${v.dataVenda ? ` · <span style="color:var(--bx-muted)">${new Date(v.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR')}</span>` : ''}<br>
           Venda: ${fmtVal(v.valor)} · Recebido: ${fmtVal(v.recebido)}<br>
           ${v.faixaLabel}
           ${v.r3 ? ' · <span style="color:var(--bx-green-light)">✓ completo</span>' : ''}
