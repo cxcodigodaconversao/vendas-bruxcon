@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a1a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Bruxcon — Pontuação DTC Master</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bx-green: #2ecc71;
+      --bx-green-dark: #1a8a45;
+      --bx-green-light: #3dff8a;
+      --bx-bg: #0a1a0f;
+      --bx-card: #0f2417;
+      --bx-card2: #122b1a;
+      --bx-border: #1e4d2b;
+      --bx-text: #e8f5ec;
+      --bx-muted: #7aab88;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bx-bg);
+      color: var(--bx-text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      overscroll-behavior: none;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+    .header {
+      background: var(--bx-bg);
+      padding: 14px 16px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--bx-border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-title { font-size: 20px; font-weight: 600; color: var(--bx-green-light); letter-spacing: .03em; }
+    .header-sub { font-size: 11px; color: var(--bx-muted); letter-spacing: .08em; text-transform: uppercase; }
+
+    /* TABS */
+    .tab-row {
+      display: flex;
+      background: var(--bx-bg);
+      border-bottom: 1px solid var(--bx-border);
+      position: sticky;
+      top: 57px;
+      z-index: 10;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 11px 4px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--bx-muted);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+    .tab.active { color: var(--bx-green-light); border-bottom-color: var(--bx-green); }
+
+    /* SCREENS */
+    .screen { display: none; padding: 12px 12px calc(12px + var(--safe-bottom)); flex: 1; }
+    .screen.active { display: block; }
+
+    /* CARDS */
+    .card {
+      background: var(--bx-card);
+      border: 1px solid var(--bx-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--bx-green);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 12px;
+    }
+
+    .divider { height: 1px; background: var(--bx-border); margin: 4px 0 14px; }
+
+    /* FIELDS */
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--bx-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--bx-border);
+      border-radius: 8px;
+      background: var(--bx-card2);
+      color: var(--bx-text);
+      font-size: 16px;
+      font-family: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: border-color .15s;
+    }
+
+    input::placeholder, textarea::placeholder { color: var(--bx-muted); opacity: .6; }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--bx-green);
+      box-shadow: 0 0 0 3px rgba(46,204,113,.15);
+    }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237aab88' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    select option { background: #0f2417; color: #e8f5ec; }
+    textarea { resize: none; line-height: 1.5; font-size: 14px; }
+
+    /* PRODUTO BADGE */
+    .product-badge {
+      display: inline-block;
+      background: rgba(46,204,113,.12);
+      border: 1px solid var(--bx-green-dark);
+      color: var(--bx-green-light);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    /* FAIXAS */
+    .faixa-group { display: flex; flex-direction: column; gap: 8px; }
+
+    .faixa-btn {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--bx-border);
+      background: var(--bx-card2);
+      color: var(--bx-muted);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all .15s;
+      min-height: 48px;
+    }
+
+    .faixa-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--bx-muted);
+      flex-shrink: 0;
+      transition: all .15s;
+    }
+
+    .faixa-label { flex: 1; font-size: 13px; line-height: 1.3; }
+
+    .faixa-pts {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: rgba(46,204,113,.12);
+      color: var(--bx-green-light);
+      opacity: 0;
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+
+    .faixa-btn.sel {
+      border-color: var(--bx-green);
+      background: rgba(46,204,113,.1);
+      color: var(--bx-text);
+    }
+    .faixa-btn.sel .faixa-dot { border-color: var(--bx-green); background: var(--bx-green); }
+    .faixa-btn.sel .faixa-pts { opacity: 1; }
+
+    /* TOGGLE SIM/NÃO */
+    .toggle-group { display: flex; gap: 8px; }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--bx-border);
+      background: var(--bx-card2);
+      color: var(--bx-muted);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: center;
+      min-height: 48px;
+      transition: all .15s;
+    }
+
+    .toggle-btn.sel-sim { background: rgba(46,204,113,.15); border-color: var(--bx-green); color: var(--bx-green-light); }
+    .toggle-btn.sel-nao { background: rgba(192,57,43,.12); border-color: #c0392b; color: #e74c3c; }
+
+    /* CAIXA RESTANTE */
+    .resto-box {
+      background: rgba(46,204,113,.05);
+      border: 1px solid var(--bx-green-dark);
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 10px;
+      display: none;
+    }
+    .resto-box.show { display: block; }
+    .resto-box .field { margin-bottom: 10px; }
+    .resto-box .field:last-child { margin-bottom: 0; }
+
+    /* PONTOS PREVIEW */
+    .pts-box {
+      background: var(--bx-card2);
+      border: 1px solid var(--bx-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .pts-number { font-size: 42px; font-weight: 700; color: var(--bx-green-light); line-height: 1; }
+    .pts-label { font-size: 11px; color: var(--bx-muted); text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; margin-bottom: 12px; }
+
+    .rule-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--bx-border); }
+
+    .rule-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      transition: all .2s;
+    }
+    .dot-on { background: var(--bx-green-dark); color: var(--bx-green-light); }
+    .dot-off { background: #1a2e1e; color: #3d6b48; }
+
+    .rule-text { font-size: 13px; color: var(--bx-muted); transition: color .2s; }
+    .rule-text.on { color: var(--bx-text); }
+
+    /* BOTÃO PRINCIPAL */
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      border-radius: 10px;
+      border: none;
+      background: var(--bx-green);
+      color: #0a1a0f;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: .02em;
+      min-height: 52px;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn-primary:active { opacity: .85; transform: scale(.98); }
+
+    /* TOTAIS */
+    .total-bar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 14px;
+      background: rgba(46,204,113,.07);
+      border: 1px solid var(--bx-green-dark);
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    .total-item { flex: 1; text-align: center; }
+    .total-num { font-size: 20px; font-weight: 700; color: var(--bx-green-light); }
+    .total-lbl { font-size: 10px; color: var(--bx-muted); text-transform: uppercase; letter-spacing: .07em; }
+
+    /* RANKING */
+    .rank-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--bx-border); }
+    .rank-row:last-child { border: none; }
+    .rank-pos { font-size: 14px; color: var(--bx-muted); width: 24px; text-align: center; flex-shrink: 0; }
+    .rank-name { flex: 1; font-size: 15px; font-weight: 600; color: var(--bx-text); }
+    .rank-v { font-size: 11px; color: var(--bx-muted); margin-right: 6px; }
+    .rank-pts { font-size: 16px; font-weight: 700; color: var(--bx-green-light); }
+    .rank-bar-wrap { height: 3px; background: var(--bx-border); border-radius: 2px; margin-top: 4px; }
+    .rank-bar { height: 3px; background: var(--bx-green); border-radius: 2px; transition: width .5s ease; }
+
+    /* HISTÓRICO */
+    .sale-item { padding: 12px 0; border-bottom: 1px solid var(--bx-border); }
+    .sale-item:last-child { border: none; }
+    .sale-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .sale-closer { font-size: 14px; font-weight: 700; color: var(--bx-text); }
+    .sale-hora { font-size: 12px; color: var(--bx-muted); }
+    .sale-pts-badge {
+      background: var(--bx-green-dark);
+      color: var(--bx-green-light);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .sale-detail { font-size: 13px; color: var(--bx-muted); line-height: 1.7; }
+    .sale-detail strong { color: var(--bx-text); }
+    .nego-tag {
+      display: inline-block;
+      background: rgba(46,204,113,.08);
+      border: 1px solid var(--bx-green-dark);
+      color: var(--bx-green);
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-top: 4px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .empty { text-align: center; color: var(--bx-muted); font-size: 14px; padding: 2.5rem 0; }
+
+    .danger-btn {
+      background: none;
+      border: none;
+      color: #c0392b;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 10px 0;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .card-title { font-size: 11px; font-weight: 700; color: var(--bx-muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="36" height="36" style="flex-shrink:0">
+      <rect width="40" height="40" rx="7" fill="#0a1a0f"/>
+      <polygon points="8,8 20,8 20,14 14,14 14,20 8,20" fill="#2ecc71"/>
+      <polygon points="20,20 26,20 26,26 32,26 32,32 20,32" fill="#2ecc71"/>
+      <rect x="20" y="8" width="12" height="6" rx="1" fill="#1a8a45"/>
+      <rect x="8" y="26" width="12" height="6" rx="1" fill="#1a8a45"/>
+    </svg>
+    <div>
+      <div class="header-title">bruxcon</div>
+      <div class="header-sub">International Bruxism Convention</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-row">
+    <button class="tab active" onclick="switchTab('registrar', this)">Registrar</button>
+    <button class="tab" onclick="switchTab('ranking', this)">Ranking</button>
+    <button class="tab" onclick="switchTab('vendas', this)">Vendas</button>
+  </div>
+
+  <!-- ===== REGISTRAR ===== -->
+  <div id="tab-registrar" class="screen active">
+
+    <div class="card">
+      <div class="product-badge">DTC Master</div>
+      <div class="section-label">Dados da venda</div>
+
+      <div class="field">
+        <label>Closer</label>
+        <select id="sel-closer" onchange="calcPts()">
+          <option value="">Selecionar...</option>
+          <option>Everton</option>
+          <option>Jezrrel</option>
+          <option>Renato</option>
+          <option>Ana Luiza</option>
+          <option>Ani Caroline</option>
+          <option>Bruna</option>
+          <option>Gabriel Aduati</option>
+          <option>Gabriel Jesus</option>
+          <option>Mila</option>
+          <option>Rodrigo</option>
+          <option>Willy</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Nome do cliente</label>
+        <input type="text" id="inp-cliente" placeholder="Nome completo" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label>Valor da venda (R$)</label>
+        <input type="number" id="inp-valor" placeholder="0" inputmode="decimal" oninput="calcPts()">
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-label">Recebimento</div>
+
+      <div class="field">
+        <label>Qual foi o recebimento?</label>
+        <div class="faixa-group">
+          <button class="faixa-btn" id="faixa-0" onclick="setFaixa(0)">
+            <div class="faixa-dot"></div>
+            <span class="faixa-label">Abaixo de R$ 15.000</span>
+            <span class="faixa-pts">0 pts extras</span>
+          </button>
+          <button class="faixa-btn" id="faixa-1" onclick="setFaixa(1)">
+            <div class="faixa-dot"></div>
+            <span class="faixa-label">R$ 15.000 até R$ 29.996</span>
+            <span class="faixa-pts">+1 pt</span>
+          </button>
+          <button class="faixa-btn" id="faixa-2" onclick="setFaixa(2)">
+            <div class="faixa-dot"></div>
+            <span class="faixa-label">Acima de R$ 29.997</span>
+            <span class="faixa-pts">+1 pt</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Valor recebido (R$)</label>
+        <input type="number" id="inp-recebido" placeholder="0" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label>Recebimento completo?</label>
+        <div class="toggle-group">
+          <button class="toggle-btn" id="btn-rc-sim" onclick="setToggleRc('sim')">Sim</button>
+          <button class="toggle-btn" id="btn-rc-nao" onclick="setToggleRc('nao')">Não</button>
+        </div>
+
+        <div class="resto-box" id="resto-box">
+          <div class="field">
+            <label>Valor restante (R$)</label>
+            <input type="number" id="inp-restante" placeholder="0" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label>Como foi negociado o restante?</label>
+            <textarea id="inp-negociacao" rows="3"
+              placeholder="Ex: R$ 10.000 via boleto em 30 dias, restante no cartão em 3x..."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PONTOS PREVIEW -->
+    <div class="pts-box">
+      <div class="pts-number" id="pts-preview">0</div>
+      <div class="pts-label">pontos nesta venda</div>
+      <div class="rule-row">
+        <div class="rule-dot dot-off" id="r1-dot">1</div>
+        <span class="rule-text" id="r1-txt">Ponto recorrente (base)</span>
+      </div>
+      <div class="rule-row">
+        <div class="rule-dot dot-off" id="r2-dot">+1</div>
+        <span class="rule-text" id="r2-txt">Recebido acima de R$ 15.000</span>
+      </div>
+      <div class="rule-row">
+        <div class="rule-dot dot-off" id="r3-dot">+1</div>
+        <span class="rule-text" id="r3-txt">Recebimento completo</span>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="registrar()">Confirmar venda</button>
+  </div>
+
+  <!-- ===== RANKING ===== -->
+  <div id="tab-ranking" class="screen">
+    <div class="total-bar">
+      <div class="total-item">
+        <div class="total-num" id="ttl-vendas">0</div>
+        <div class="total-lbl">Vendas</div>
+      </div>
+      <div class="total-item">
+        <div class="total-num" id="ttl-pts">0</div>
+        <div class="total-lbl">Pontos</div>
+      </div>
+      <div class="total-item">
+        <div class="total-num" id="ttl-vol">R$ 0</div>
+        <div class="total-lbl">Volume</div>
+      </div>
+    </div>
+    <div class="card">
+      <div id="ranking-list"><div class="empty">Nenhuma venda ainda</div></div>
+    </div>
+  </div>
+
+  <!-- ===== VENDAS ===== -->
+  <div id="tab-vendas" class="screen">
+    <div class="card">
+      <div class="card-title">Histórico de vendas</div>
+      <div id="vendas-list"><div class="empty">Nenhuma venda ainda</div></div>
+    </div>
+    <button class="danger-btn" onclick="confirmarLimpar()">Limpar todos os dados</button>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+  // ── DADOS ──────────────────────────────────────────────────
+  let vendas = [];
+  try { vendas = JSON.parse(localStorage.getItem('bx-vendas-v1') || '[]'); } catch(e) {}
+
+  const CLOSERS = ['Everton','Jezrrel','Renato','Ana Luiza','Ani Caroline','Bruna',
+                   'Gabriel Aduati','Gabriel Jesus','Mila','Rodrigo','Willy'];
+  const FAIXA_LABELS = ['Abaixo de R$ 15.000','R$ 15.000 até R$ 29.996','Acima de R$ 29.997'];
+
+  let stateFaixa = null;
+  let stateRc = null;
+
+  // ── TABS ───────────────────────────────────────────────────
+  function switchTab(t, el) {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
+    document.getElementById('tab-' + t).classList.add('active');
+    el.classList.add('active');
+    if (t === 'ranking') renderRanking();
+    if (t === 'vendas')  renderVendas();
+  }
+
+  // ── FAIXAS ─────────────────────────────────────────────────
+  function setFaixa(idx) {
+    stateFaixa = idx;
+    [0, 1, 2].forEach(i =>
+      document.getElementById('faixa-' + i).className = 'faixa-btn' + (i === idx ? ' sel' : '')
+    );
+    calcPts();
+  }
+
+  // ── TOGGLE RECEBIMENTO COMPLETO ────────────────────────────
+  function setToggleRc(val) {
+    stateRc = val;
+    document.getElementById('btn-rc-sim').className = 'toggle-btn' + (val === 'sim' ? ' sel-sim' : '');
+    document.getElementById('btn-rc-nao').className = 'toggle-btn' + (val === 'nao' ? ' sel-nao' : '');
+    document.getElementById('resto-box').className   = 'resto-box'  + (val === 'nao' ? ' show' : '');
+    calcPts();
+  }
+
+  // ── CÁLCULO DE PONTOS ──────────────────────────────────────
+  function getPts(faixa, completo) {
+    const r2 = faixa !== null && faixa >= 1;
+    const r3 = completo === 'sim';
+    return { total: 1 + (r2 ? 1 : 0) + (r3 ? 1 : 0), r2, r3 };
+  }
+
+  function calcPts() {
+    const p = getPts(stateFaixa, stateRc);
+    document.getElementById('pts-preview').textContent = p.total;
+    applyDot('r1', true);
+    applyDot('r2', p.r2);
+    applyDot('r3', p.r3);
+  }
+
+  function applyDot(id, on) {
+    document.getElementById(id + '-dot').className = 'rule-dot ' + (on ? 'dot-on' : 'dot-off');
+    document.getElementById(id + '-txt').className = 'rule-text'  + (on ? ' on' : '');
+  }
+
+  // ── REGISTRAR VENDA ────────────────────────────────────────
+  function registrar() {
+    const closer   = document.getElementById('sel-closer').value;
+    const cliente  = document.getElementById('inp-cliente').value.trim();
+    const valor    = parseFloat(document.getElementById('inp-valor').value) || 0;
+    const recebido = parseFloat(document.getElementById('inp-recebido').value) || 0;
+
+    if (!closer)  { alert('Selecione o closer.'); return; }
+    if (!cliente) { alert('Informe o nome do cliente.'); return; }
+    if (!valor)   { alert('Informe o valor da venda.'); return; }
+    if (stateFaixa === null) { alert('Selecione a faixa de recebimento.'); return; }
+    if (stateRc === null)    { alert('Informe se o recebimento foi completo.'); return; }
+
+    const restante    = stateRc === 'nao' ? (parseFloat(document.getElementById('inp-restante').value) || 0) : 0;
+    const negociacao  = stateRc === 'nao' ? document.getElementById('inp-negociacao').value.trim() : '';
+    const p           = getPts(stateFaixa, stateRc);
+    const now         = new Date();
+    const hora        = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+    vendas.push({
+      id: Date.now(), closer, cliente, produto: 'DTC Master',
+      valor, recebido, faixa: stateFaixa, faixaLabel: FAIXA_LABELS[stateFaixa],
+      completo: stateRc, restante, negociacao,
+      pts: p.total, r2: p.r2, r3: p.r3, hora
+    });
+
+    save();
+    resetForm();
+    alert('✓ Venda registrada com sucesso!\n+' + p.total + ' ponto' + (p.total > 1 ? 's' : '') + ' para ' + closer);
+  }
+
+  function resetForm() {
+    document.getElementById('sel-closer').value      = '';
+    document.getElementById('inp-cliente').value     = '';
+    document.getElementById('inp-valor').value       = '';
+    document.getElementById('inp-recebido').value    = '';
+    document.getElementById('inp-restante').value    = '';
+    document.getElementById('inp-negociacao').value  = '';
+    stateFaixa = null; stateRc = null;
+    [0,1,2].forEach(i => document.getElementById('faixa-' + i).className = 'faixa-btn');
+    document.getElementById('btn-rc-sim').className  = 'toggle-btn';
+    document.getElementById('btn-rc-nao').className  = 'toggle-btn';
+    document.getElementById('resto-box').className   = 'resto-box';
+    document.getElementById('pts-preview').textContent = '0';
+    applyDot('r1', false); applyDot('r2', false); applyDot('r3', false);
+  }
+
+  // ── SAVE ───────────────────────────────────────────────────
+  function save() {
+    localStorage.setItem('bx-vendas-v1', JSON.stringify(vendas));
+  }
+
+  function fmtVal(v) {
+    return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  // ── RANKING ────────────────────────────────────────────────
+  function renderRanking() {
+    const totals = {};
+    CLOSERS.forEach(c => { totals[c] = { pts: 0, vendas: 0, vol: 0 }; });
+    vendas.forEach(v => {
+      if (totals[v.closer]) {
+        totals[v.closer].pts    += v.pts;
+        totals[v.closer].vendas += 1;
+        totals[v.closer].vol    += v.valor;
+      }
+    });
+
+    const sorted = Object.entries(totals).sort((a, b) => b[1].pts - a[1].pts || b[1].vendas - a[1].vendas);
+    const maxPts = sorted[0] ? (sorted[0][1].pts || 1) : 1;
+    const medals = ['🥇','🥈','🥉'];
+
+    document.getElementById('ttl-vendas').textContent = vendas.length;
+    document.getElementById('ttl-pts').textContent    = vendas.reduce((a, v) => a + v.pts, 0);
+    const vol = vendas.reduce((a, v) => a + v.valor, 0);
+    document.getElementById('ttl-vol').textContent    = vol > 0 ? fmtVal(vol) : 'R$ 0';
+
+    document.getElementById('ranking-list').innerHTML = sorted.map(([name, d], i) => `
+      <div class="rank-row">
+        <span class="rank-pos">${i < 3 && d.pts > 0 ? medals[i] : i + 1}</span>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="rank-name">${name}</span>
+            <span class="rank-v">${d.vendas}v</span>
+            <span class="rank-pts">${d.pts}pt</span>
+          </div>
+          <div class="rank-bar-wrap">
+            <div class="rank-bar" style="width:${maxPts > 0 ? Math.round(d.pts / maxPts * 100) : 0}%"></div>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  // ── HISTÓRICO ──────────────────────────────────────────────
+  function renderVendas() {
+    const el = document.getElementById('vendas-list');
+    if (!vendas.length) { el.innerHTML = '<div class="empty">Nenhuma venda ainda</div>'; return; }
+
+    el.innerHTML = [...vendas].reverse().map(v => `
+      <div class="sale-item">
+        <div class="sale-header">
+          <span class="sale-closer">${v.closer}</span>
+          <span class="sale-pts-badge">+${v.pts} pt${v.pts !== 1 ? 's' : ''}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <strong style="color:var(--bx-text);font-size:14px">${v.cliente}</strong>
+          <span class="sale-hora">${v.hora}</span>
+        </div>
+        <div class="sale-detail">
+          Venda: ${fmtVal(v.valor)} · Recebido: ${fmtVal(v.recebido)}<br>
+          ${v.faixaLabel}
+          ${v.r3 ? ' · <span style="color:var(--bx-green-light)">✓ completo</span>' : ''}
+          ${v.negociacao ? `<br><span class="nego-tag">Restante ${fmtVal(v.restante)}: ${v.negociacao}</span>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  // ── LIMPAR ─────────────────────────────────────────────────
+  function confirmarLimpar() {
+    if (confirm('Tem certeza? Todos os dados serão apagados permanentemente.')) {
+      vendas = [];
+      save();
+      renderVendas();
+      renderRanking();
+    }
+  }
+</script>
+
+</body>
+</html>
