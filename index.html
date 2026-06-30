@@ -398,13 +398,13 @@
 
   <!-- TABS -->
   <div class="tab-row">
-    <button class="tab active" onclick="switchTab('registrar', this)">Registrar</button>
-    <button class="tab" onclick="switchTab('ranking', this)">Ranking</button>
+    <button class="tab" onclick="switchTab('registrar', this)">Registrar</button>
+    <button class="tab active" onclick="switchTab('ranking', this)">Ranking</button>
     <button class="tab" onclick="switchTab('vendas', this)">Vendas</button>
   </div>
 
   <!-- ===== REGISTRAR ===== -->
-  <div id="tab-registrar" class="screen active">
+  <div id="tab-registrar" class="screen">
 
     <div class="card">
       <div class="product-badge">DTC Master</div>
@@ -510,7 +510,7 @@
   </div>
 
   <!-- ===== RANKING ===== -->
-  <div id="tab-ranking" class="screen">
+  <div id="tab-ranking" class="screen active">
     <div class="total-bar">
       <div class="total-item">
         <div class="total-num" id="ttl-vendas">0</div>
@@ -545,6 +545,9 @@
   // ── DADOS ──────────────────────────────────────────────────
   let vendas = [];
   try { vendas = JSON.parse(localStorage.getItem('bx-vendas-v1') || '[]'); } catch(e) {}
+
+  // Renderiza ranking na abertura
+  window.addEventListener('DOMContentLoaded', renderRanking);
 
   const CLOSERS = ['Everton','Jezrrel','Renato','Ana Luiza','Ani Caroline','Bruna',
                    'Gabriel Aduati','Gabriel Jesus','Mila','Rodrigo','Willy'];
