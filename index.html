@@ -212,6 +212,7 @@
   <div class="tab-row">
     <button class="tab" id="tab-btn-registrar" onclick="switchTab('registrar',this)">Registrar</button>
     <button class="tab active" id="tab-btn-ranking" onclick="switchTab('ranking',this)">Ranking</button>
+    <button class="tab" id="tab-btn-minhas" onclick="switchTab('minhas',this)">Minhas Vendas</button>
     <button class="tab" id="tab-btn-vendas" onclick="switchTab('vendas',this)">Vendas</button>
   </div>
 
@@ -278,6 +279,31 @@
       <div class="total-item"><div class="total-num" id="ttl-vol">R$ 0</div><div class="total-lbl">Volume</div></div>
     </div>
     <div class="card"><div id="ranking-list"><div class="empty">Carregando...</div></div></div>
+  </div>
+
+  <!-- MINHAS VENDAS (closer) -->
+  <div id="tab-minhas" class="screen">
+    <div class="card">
+      <div style="text-align:center;padding:8px 0 20px">
+        <div style="font-size:11px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px" id="minhas-nome-label"></div>
+        <div style="font-size:60px;font-weight:700;color:var(--bx-green-light);line-height:1" id="minhas-pts">0</div>
+        <div style="font-size:13px;color:var(--bx-muted);margin-top:4px;margin-bottom:24px">pontos</div>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <div style="flex:1;background:var(--bx-card2);border:1px solid var(--bx-border);border-radius:10px;padding:14px 10px;text-align:center">
+            <div style="font-size:26px;font-weight:700;color:var(--bx-text)" id="minhas-num-vendas">0</div>
+            <div style="font-size:10px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">Vendas</div>
+          </div>
+          <div style="flex:1;background:var(--bx-card2);border:1px solid var(--bx-border);border-radius:10px;padding:14px 10px;text-align:center">
+            <div style="font-size:20px;font-weight:700;color:var(--bx-text)" id="minhas-recebido">R$ 0</div>
+            <div style="font-size:10px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">Recebido</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Detalhes das minhas vendas</div>
+      <div id="minhas-lista"><div class="empty">Nenhuma venda ainda</div></div>
+    </div>
   </div>
 
   <!-- VENDAS -->
@@ -506,6 +532,7 @@ window.switchTab=function(t,el){
   el.classList.add('active');
   if(t==='ranking') renderRanking();
   if(t==='vendas')  renderVendas();
+  if(t==='minhas')  renderMinhas();
 };
 
 // ── FORM ───────────────────────────────────────────────
