@@ -212,7 +212,6 @@
   <div class="tab-row">
     <button class="tab" id="tab-btn-registrar" onclick="switchTab('registrar',this)">Registrar</button>
     <button class="tab active" id="tab-btn-ranking" onclick="switchTab('ranking',this)">Ranking</button>
-    <button class="tab" id="tab-btn-minhas" onclick="switchTab('minhas',this)">Pontuação</button>
     <button class="tab" id="tab-btn-vendas" onclick="switchTab('vendas',this)">Vendas</button>
   </div>
 
@@ -281,35 +280,30 @@
     <div class="card"><div id="ranking-list"><div class="empty">Carregando...</div></div></div>
   </div>
 
-  <!-- MINHAS VENDAS (closer) -->
-  <div id="tab-minhas" class="screen">
-    <div class="card">
-      <div style="text-align:center;padding:8px 0 20px">
-        <div style="font-size:11px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px" id="minhas-nome-label"></div>
-        <div style="font-size:60px;font-weight:700;color:var(--bx-green-light);line-height:1" id="minhas-pts">0</div>
-        <div style="font-size:13px;color:var(--bx-muted);margin-top:4px;margin-bottom:24px">pontos</div>
+  <!-- VENDAS -->
+  <div id="tab-vendas" class="screen">
+
+    <!-- Card resumo individual (só closers) -->
+    <div class="card" id="card-resumo-closer" style="display:none">
+      <div style="text-align:center;padding:4px 0 16px">
+        <div style="font-size:11px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px" id="resumo-nome"></div>
+        <div style="font-size:58px;font-weight:700;color:var(--bx-green-light);line-height:1" id="resumo-pts">0</div>
+        <div style="font-size:13px;color:var(--bx-muted);margin-top:4px;margin-bottom:18px">pontos</div>
         <div style="display:flex;gap:10px;justify-content:center">
           <div style="flex:1;background:var(--bx-card2);border:1px solid var(--bx-border);border-radius:10px;padding:14px 10px;text-align:center">
-            <div style="font-size:26px;font-weight:700;color:var(--bx-text)" id="minhas-num-vendas">0</div>
+            <div style="font-size:26px;font-weight:700;color:var(--bx-text)" id="resumo-num-vendas">0</div>
             <div style="font-size:10px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">Vendas</div>
           </div>
           <div style="flex:1;background:var(--bx-card2);border:1px solid var(--bx-border);border-radius:10px;padding:14px 10px;text-align:center">
-            <div style="font-size:20px;font-weight:700;color:var(--bx-text)" id="minhas-recebido">R$ 0</div>
+            <div style="font-size:20px;font-weight:700;color:var(--bx-text)" id="resumo-recebido">R$ 0</div>
             <div style="font-size:10px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">Recebido</div>
           </div>
         </div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-title">Detalhes das minhas vendas</div>
-      <div id="minhas-lista"><div class="empty">Nenhuma venda ainda</div></div>
-    </div>
-  </div>
 
-  <!-- VENDAS -->
-  <div id="tab-vendas" class="screen">
     <div class="card">
-      <div class="card-title">Histórico de vendas</div>
+      <div class="card-title" id="vendas-titulo">Histórico de vendas</div>
       <div id="vendas-list"><div class="empty">Carregando...</div></div>
     </div>
     <button class="danger-btn" id="btn-limpar" style="display:none" onclick="confirmarLimpar()">Limpar todos os dados</button>
@@ -521,7 +515,7 @@ function iniciarListener(){
     setSyncDot('ok');
     renderRanking();
     if(document.getElementById('tab-vendas').classList.contains('active')) renderVendas();
-    renderMinhas();
+    else if(!currentIsAdm){ const cr=document.getElementById('card-resumo-closer'); if(cr&&cr.style.display!=='none') renderVendas(); }
   }, ()=>setSyncDot('err'));
 }
 
@@ -533,7 +527,6 @@ window.switchTab=function(t,el){
   el.classList.add('active');
   if(t==='ranking') renderRanking();
   if(t==='vendas')  renderVendas();
-  if(t==='minhas')  renderMinhas();
 };
 
 // ── FORM ───────────────────────────────────────────────
@@ -690,6 +683,24 @@ function renderRanking(){
 // ── HISTÓRICO ──────────────────────────────────────────
 function renderVendas(){
   const el=document.getElementById('vendas-list');
+
+  // Atualizar card resumo closer
+  const cardResumo=document.getElementById('card-resumo-closer');
+  if(cardResumo){
+    if(!currentIsAdm){
+      cardResumo.style.display='block';
+      const minhas=vendas.filter(v=>v.uid===currentUser.uid);
+      const pts=minhas.reduce((a,v)=>a+(v.pts||0),0);
+      const recebido=minhas.reduce((a,v)=>a+(v.recebido||0),0);
+      document.getElementById('resumo-nome').textContent=currentNome;
+      document.getElementById('resumo-pts').textContent=fmtPts(pts);
+      document.getElementById('resumo-num-vendas').textContent=minhas.length;
+      document.getElementById('resumo-recebido').textContent=fmtVal(recebido);
+    } else {
+      cardResumo.style.display='none';
+    }
+  }
+
   const lista=currentIsAdm?vendas:vendas.filter(v=>v.uid===currentUser.uid);
   if(!lista.length){el.innerHTML=`<div class="empty">${currentIsAdm?'Nenhuma venda ainda':'Você ainda não registrou vendas'}</div>`;return;}
   el.innerHTML=lista.map(v=>{
@@ -794,49 +805,6 @@ window.salvarEdicao=async function(){
     hideLoad();closeModal();alert('✓ Venda atualizada!');
   }catch(e){hideLoad();alert('Erro: '+e.message);}
 };
-
-// ── PONTUAÇÃO / MINHAS VENDAS (closer) ────────────────────────
-function renderMinhas(){
-  if(!currentUser) return;
-  const minhas   = vendas.filter(v => v.uid === currentUser.uid);
-  const pts      = minhas.reduce((a,v) => a + (v.pts||0), 0);
-  const recebido = minhas.reduce((a,v) => a + (v.recebido||0), 0);
-
-  const elPts  = document.getElementById('minhas-pts');
-  const elNum  = document.getElementById('minhas-num-vendas');
-  const elRec  = document.getElementById('minhas-recebido');
-  const elNome = document.getElementById('minhas-nome-label');
-  const elLista= document.getElementById('minhas-lista');
-  if(!elPts) return;
-
-  if(elNome) elNome.textContent = currentNome;
-  elPts.textContent = fmtPts(pts);
-  elNum.textContent = minhas.length;
-  elRec.textContent = fmtVal(recebido);
-
-  if(!minhas.length){
-    elLista.innerHTML='<div class="empty">Nenhuma venda registrada ainda</div>';
-    return;
-  }
-  elLista.innerHTML = minhas.map(v=>`
-    <div class="sale-item">
-      <div class="sale-header">
-        <strong style="color:var(--bx-text);font-size:14px">${v.cliente}</strong>
-        <span class="sale-pts-badge">+${fmtPts(v.pts)} pt${v.pts!==1?'s':''}</span>
-      </div>
-      <div class="sale-detail">
-        ${v.dataVenda?`<span>${new Date(v.dataVenda+'T12:00:00').toLocaleDateString('pt-BR')}</span> · `:''}${v.hora}<br>
-        Venda: ${fmtVal(v.valor)} · Recebido: ${fmtVal(v.recebido||0)}<br>
-        ${v.faixaLabel}
-        ${v.r3?' · <span style="color:var(--bx-green-light)">✓ completo</span>':''}
-        ${v.r4?` · <span style="color:var(--bx-green-light)">✓ 2ª cadeira</span>`:''}
-        ${v.negociacao?`<br><span class="nego-tag">Restante ${fmtVal(v.restante)}: ${v.negociacao}</span>`:''}
-      </div>
-      <div class="sale-actions">
-        <button class="btn-edit" onclick="abrirEdicao('${v._id}')">✏️ Editar</button>
-      </div>
-    </div>`).join('');
-}
 
 // ── LIMPAR (só ADM) ────────────────────────────────────
 window.confirmarLimpar=async function(){
