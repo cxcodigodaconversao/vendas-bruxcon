@@ -210,9 +210,9 @@
   </div>
 
   <div class="tab-row">
-    <button class="tab" onclick="switchTab('registrar',this)">Registrar</button>
-    <button class="tab active" onclick="switchTab('ranking',this)">Ranking</button>
-    <button class="tab" onclick="switchTab('vendas',this)">Vendas</button>
+    <button class="tab" id="tab-btn-registrar" onclick="switchTab('registrar',this)">Registrar</button>
+    <button class="tab active" id="tab-btn-ranking" onclick="switchTab('ranking',this)">Ranking</button>
+    <button class="tab" id="tab-btn-vendas" onclick="switchTab('vendas',this)">Vendas</button>
   </div>
 
   <!-- REGISTRAR -->
@@ -271,9 +271,9 @@
 
   <!-- RANKING -->
   <div id="tab-ranking" class="screen active">
-    <div class="empate-note">Em caso de <span>empate na pontuação</span>, o desempate será pelo maior valor de recebimento acumulado.</div>
+    <div class="empate-note" id="empate-note">Em caso de <span>empate na pontuação</span>, o desempate será pelo maior valor de recebimento acumulado.</div>
     <div class="total-bar">
-      <div class="total-item"><div class="total-num" id="ttl-vendas">0</div><div class="total-lbl">Vendas</div></div>
+      <div class="total-item"><div class="total-num" id="ttl-vendas">0</div><div class="total-lbl" id="lbl-vendas">Vendas</div></div>
       <div class="total-item"><div class="total-num" id="ttl-pts">0</div><div class="total-lbl">Pontos</div></div>
       <div class="total-item"><div class="total-num" id="ttl-vol">R$ 0</div><div class="total-lbl">Volume</div></div>
     </div>
@@ -360,6 +360,7 @@ const firebaseConfig = {
 const EMAIL_MAP = {
   'everton@comercial10x.com.br':       { nome: 'Everton',       adm: true  },
   'jezreel@comercial10x.com.br':       { nome: 'Jezreel',       adm: true  },
+  'admin@sibx.com.br':                 { nome: 'Felipe',        adm: true  },
   'willysc7@gmail.com':                { nome: 'Willy',         adm: false },
   'comercial1@comercial10x.com.br':    { nome: 'Renato',        adm: false },
   'especialista1@comercial10x.com.br': { nome: 'Bruna',         adm: false },
@@ -369,9 +370,10 @@ const EMAIL_MAP = {
   'especialista4@comercial10x.com.br': { nome: 'Rodrigo',       adm: false },
   'a.caroline2396@gmail.com':          { nome: 'Ani Caroline',  adm: false },
   'especialista6@comercial10x.com.br': { nome: 'Ana Luiza',     adm: false },
+  'admin@sibx.com.br':                 { nome: 'Felipe',        adm: true  },
 };
 
-const CLOSERS = ['Everton','Jezreel','Renato','Ana Luiza','Ani Caroline','Bruna',
+const CLOSERS = ['Everton','Jezreel','Felipe','Renato','Ana Luiza','Ani Caroline','Bruna',
                  'Gabriel Aduati','Gabriel Jesus','Mila','Rodrigo','Willy'];
 const FAIXA_LABELS = ['Abaixo de R$ 15.000','R$ 15.000 até R$ 29.996','Acima de R$ 29.997'];
 
@@ -428,6 +430,26 @@ function mostrarApp(){
   document.getElementById('user-name-display').textContent=currentNome;
   document.getElementById('adm-badge').style.display=currentIsAdm?'inline-block':'none';
   document.getElementById('btn-limpar').style.display=currentIsAdm?'block':'none';
+  // Ranking visível apenas para ADMs
+  const tabRanking=document.getElementById('tab-btn-ranking');
+  const screenRanking=document.getElementById('tab-ranking');
+  if(currentIsAdm){
+    tabRanking.style.display='';
+    screenRanking.style.display='';
+    // Garantir que ADM abre no ranking
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+    tabRanking.classList.add('active');
+    screenRanking.classList.add('active');
+  } else {
+    tabRanking.style.display='none';
+    screenRanking.style.display='none';
+    // Closer abre em Registrar
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+    document.getElementById('tab-btn-registrar').classList.add('active');
+    document.getElementById('tab-registrar').classList.add('active');
+  }
 }
 function mostrarAuth(){
   document.getElementById('auth-screen').style.display='flex';
@@ -573,26 +595,68 @@ function renderRanking(){
       totals[v.closer].vol+=v.valor; totals[v.closer].recebido+=(v.recebido||0);
     }
   });
-  const sorted=Object.entries(totals).sort((a,b)=>b[1].pts-a[1].pts||b[1].recebido-a[1].recebido);
-  const maxPts=sorted[0]?(sorted[0][1].pts||1):1;
-  const medals=['🥇','🥈','🥉'];
-  document.getElementById('ttl-vendas').textContent=vendas.length;
-  document.getElementById('ttl-pts').textContent=fmtPts(vendas.reduce((a,v)=>a+v.pts,0));
-  const vol=vendas.reduce((a,v)=>a+v.valor,0);
-  document.getElementById('ttl-vol').textContent=vol>0?fmtVal(vol):'R$ 0';
-  document.getElementById('ranking-list').innerHTML=sorted.map(([name,d],i)=>`
-    <div class="rank-row">
-      <span class="rank-pos">${i<3&&d.pts>0?medals[i]:i+1}</span>
-      <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span class="rank-name">${name}</span>
-          <span class="rank-v">${d.vendas}v</span>
-          <span class="rank-pts">${fmtPts(d.pts)}pt</span>
+
+  const empEl=document.getElementById('empate-note');
+  if(empEl) empEl.style.display=currentIsAdm?'block':'none';
+  if(currentIsAdm){
+    // ADM: ranking completo
+    const sorted=Object.entries(totals).sort((a,b)=>b[1].pts-a[1].pts||b[1].recebido-a[1].recebido);
+    const maxPts=sorted[0]?(sorted[0][1].pts||1):1;
+    const medals=['🥇','🥈','🥉'];
+    document.getElementById('ttl-vendas').textContent=vendas.length;
+    document.getElementById('ttl-pts').textContent=fmtPts(vendas.reduce((a,v)=>a+v.pts,0));
+    const vol=vendas.reduce((a,v)=>a+v.valor,0);
+    document.getElementById('ttl-vol').textContent=vol>0?fmtVal(vol):'R$ 0';
+    document.getElementById('ranking-list').innerHTML=sorted.map(([name,d],i)=>`
+      <div class="rank-row">
+        <span class="rank-pos">${i<3&&d.pts>0?medals[i]:i+1}</span>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="rank-name">${name}</span>
+            <span class="rank-v">${d.vendas}v</span>
+            <span class="rank-pts">${fmtPts(d.pts)}pt</span>
+          </div>
+          <div class="rank-sub">Recebido: ${fmtVal(d.recebido)}</div>
+          <div class="rank-bar-wrap"><div class="rank-bar" style="width:${maxPts>0?Math.round(d.pts/maxPts*100):0}%"></div></div>
         </div>
-        <div class="rank-sub">Recebido: ${fmtVal(d.recebido)}</div>
-        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${maxPts>0?Math.round(d.pts/maxPts*100):0}%"></div></div>
+      </div>`).join('');
+  } else {
+    // CLOSER: vê apenas seu próprio card
+    const myData = totals[currentNome] || {pts:0,vendas:0,vol:0,recebido:0};
+    const myVendas = vendas.filter(v=>v.uid===currentUser.uid);
+    document.getElementById('ttl-vendas').textContent=myData.vendas;
+    document.getElementById('ttl-pts').textContent=fmtPts(myData.pts);
+    document.getElementById('ttl-vol').textContent=myData.vol>0?fmtVal(myData.vol):'R$ 0';
+    document.getElementById('ranking-list').innerHTML=`
+      <div style="text-align:center;padding:8px 0 16px">
+        <div style="font-size:11px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px">Sua pontuação</div>
+        <div style="font-size:56px;font-weight:700;color:var(--bx-green-light);line-height:1">${fmtPts(myData.pts)}</div>
+        <div style="font-size:13px;color:var(--bx-muted);margin-top:4px;margin-bottom:20px">pontos</div>
+        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px">
+          <div style="background:var(--bx-card2);border:1px solid var(--bx-border);border-radius:10px;padding:12px 20px;text-align:center">
+            <div style="font-size:22px;font-weight:700;color:var(--bx-text)">${myData.vendas}</div>
+            <div style="font-size:11px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Vendas</div>
+          </div>
+          <div style="background:var(--bx-card2);border:1px solid var(--bx-border);border-radius:10px;padding:12px 20px;text-align:center">
+            <div style="font-size:22px;font-weight:700;color:var(--bx-text)">${fmtVal(myData.recebido)}</div>
+            <div style="font-size:11px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Recebido</div>
+          </div>
+        </div>
+        ${myData.vendas===0?'<div style="color:var(--bx-muted);font-size:13px">Nenhuma venda registrada ainda</div>':''}
       </div>
-    </div>`).join('');
+      <div style="border-top:1px solid var(--bx-border);padding-top:12px">
+        <div style="font-size:11px;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Suas vendas recentes</div>
+        ${myVendas.slice(0,3).map(v=>`
+          <div style="padding:8px 0;border-bottom:1px solid var(--bx-border)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong style="font-size:13px;color:var(--bx-text)">${v.cliente}</strong>
+              <span style="font-size:11px;font-weight:700;background:var(--bx-green-dark);color:var(--bx-green-light);padding:2px 8px;border-radius:12px">+${fmtPts(v.pts)}pt</span>
+            </div>
+            <div style="font-size:12px;color:var(--bx-muted);margin-top:2px">${fmtVal(v.valor)} · ${v.hora}</div>
+          </div>`).join('')}
+        ${myVendas.length===0?'<div style="color:var(--bx-muted);font-size:13px;text-align:center;padding:12px 0">Nenhuma venda ainda</div>':''}
+      </div>`;
+  }
 }
 
 // ── HISTÓRICO ──────────────────────────────────────────
