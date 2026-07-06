@@ -1016,35 +1016,16 @@ window.exportarExcel = function() {
   if (!currentIsAdm) { alert('Sem permissão.'); return; }
   if (!vendas.length) { alert('Nenhuma venda para exportar.'); return; }
 
-  // Montar linhas da planilha
-  const linhas = vendas.map(v => ({
-    'Closer':            v.closer || '',
-    'Cliente':           v.cliente || '',
-    'E-mail':            v.email || '',
-    'Telefone':          v.telefone || '',
-    'Data da venda':     v.dataVenda ? new Date(v.dataVenda+'T12:00:00').toLocaleDateString('pt-BR') : '',
-    'Hora':              v.hora || '',
-    'Produto':           v.produto || 'DTC Master',
-    'Valor da venda':    v.valor || 0,
-    'Valor recebido':    v.recebido || 0,
-    'Faixa recebimento': v.faixaLabel || '',
-    'Receb. completo':   v.completo === 'sim' ? 'Sim' : 'Não',
-    'Valor restante':    v.restante || 0,
-    'Negociação restante': v.negociacao || '',
-    '2ª cadeira':        v.cadeira === 'sim' ? 'Sim' : 'Não',
-    'Valor 2ª cadeira':  v.valorCadeira || 0,
-    'Pontos':            v.pts || 0,
-    'Pt recorrente':     'Sim',
-    'Pt +15k':           v.r2 ? 'Sim' : 'Não',
-    'Pt completo':       v.r3 ? 'Sim' : 'Não',
-    'Pt 2ª cadeira':     v.r4 ? 'Sim' : 'Não',
-  }));
+  const wb = XLSX.utils.book_new();
+  const fmtR = v => 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtD = dv => dv ? new Date(dv+'T12:00:00').toLocaleDateString('pt-BR') : '';
 
-  // Criar aba de ranking
+  const CLOSERS_ALL = ['Everton','Jezreel','Renato','Felipe','Elias','Ana Luiza','Ani Caroline',
+                       'Bruna','Gabriel Aduati','Gabriel Jesus','Mila','Rodrigo','Willy'];
+
+  // ── ABA 1: RANKING ─────────────────────────────────────
   const totals = {};
-  const CLOSERS_ALL = ['Everton','Jezreel','Renato','Felipe','Elias','Ana Luiza','Ani Caroline','Bruna',
-                       'Gabriel Aduati','Gabriel Jesus','Mila','Rodrigo','Willy'];
-  CLOSERS_ALL.forEach(c => { totals[c] = {pts:0, vendas:0, recebido:0, vol:0}; });
+  CLOSERS_ALL.forEach(n => { totals[n] = {pts:0, vendas:0, recebido:0, vol:0}; });
   vendas.forEach(v => {
     if (totals[v.closer]) {
       totals[v.closer].pts      += v.pts || 0;
@@ -1053,33 +1034,98 @@ window.exportarExcel = function() {
       totals[v.closer].vol      += v.valor || 0;
     }
   });
-  const ranking = Object.entries(totals)
+  const dadosRanking = Object.entries(totals)
     .sort((a,b) => b[1].pts - a[1].pts || b[1].recebido - a[1].recebido)
     .map(([nome, d], i) => ({
-      'Posição':          i + 1,
-      'Closer':           nome,
-      'Pontos':           parseFloat(d.pts.toFixed(1)),
-      'Nº de Vendas':     d.vendas,
-      'Total Recebido':   d.recebido,
-      'Volume de Vendas': d.vol,
+      'Posição':           i + 1,
+      'Closer':            nome,
+      'Pontos':            parseFloat((d.pts).toFixed(1)),
+      'Nº de Vendas':      d.vendas,
+      'Total Recebido':    fmtR(d.recebido),
+      'Volume de Vendas':  fmtR(d.vol),
     }));
-
-  // Criar workbook com 2 abas
-  const wb = XLSX.utils.book_new();
-
-  const wsVendas  = XLSX.utils.json_to_sheet(linhas);
-  const wsRanking = XLSX.utils.json_to_sheet(ranking);
-
-  // Largura das colunas
-  wsVendas['!cols'] = [
-    {wch:14},{wch:30},{wch:28},{wch:16},{wch:14},{wch:7},
-    {wch:12},{wch:14},{wch:14},{wch:22},{wch:14},{wch:14},
-    {wch:40},{wch:12},{wch:16},{wch:7},{wch:10},{wch:8},{wch:10},{wch:12}
-  ];
-  wsRanking['!cols'] = [{wch:8},{wch:16},{wch:8},{wch:12},{wch:16},{wch:16}];
-
+  const wsRanking = XLSX.utils.json_to_sheet(dadosRanking);
+  wsRanking['!cols'] = [{wch:8},{wch:16},{wch:8},{wch:12},{wch:18},{wch:18}];
   XLSX.utils.book_append_sheet(wb, wsRanking, 'Ranking');
-  XLSX.utils.book_append_sheet(wb, wsVendas,  'Vendas Detalhadas');
+
+  // ── ABA 2: TODAS AS VENDAS (resumo) ────────────────────
+  const dadosResumo = [...vendas].sort((a,b) => (b.ts||0)-(a.ts||0)).map(v => ({
+    'Vendedor':        v.closer || '',
+    'Cliente':         v.cliente || '',
+    'E-mail':          v.email || '',
+    'Telefone':        v.telefone || '',
+    'Data da venda':   fmtD(v.dataVenda),
+    'Hora':            v.hora || '',
+    'Valor da venda':  fmtR(v.valor),
+    'Valor recebido':  fmtR(v.recebido),
+    'Observação':      v.negociacao || '',
+    'Pontos':          parseFloat((v.pts||0).toFixed(1)),
+  }));
+  const wsResumo = XLSX.utils.json_to_sheet(dadosResumo);
+  wsResumo['!cols'] = [
+    {wch:16},{wch:32},{wch:30},{wch:16},
+    {wch:14},{wch:7},{wch:16},{wch:16},{wch:50},{wch:8}
+  ];
+  XLSX.utils.book_append_sheet(wb, wsResumo, 'Todas as Vendas');
+
+  // ── ABA 3: VENDAS DETALHADAS (todos os campos) ─────────
+  const dadosDetalhado = [...vendas].sort((a,b) => (b.ts||0)-(a.ts||0)).map(v => ({
+    'Vendedor':              v.closer || '',
+    'Cliente':               v.cliente || '',
+    'E-mail':                v.email || '',
+    'Telefone':              v.telefone || '',
+    'Data da venda':         fmtD(v.dataVenda),
+    'Hora':                  v.hora || '',
+    'Produto':               v.produto || 'DTC Master',
+    'Valor da venda':        fmtR(v.valor),
+    'Valor recebido':        fmtR(v.recebido),
+    'Faixa recebimento':     v.faixaLabel || '',
+    'Receb. completo':       v.completo === 'sim' ? 'Sim' : 'Não',
+    'Valor restante':        fmtR(v.restante),
+    'Observação / Negociação': v.negociacao || '',
+    '2ª cadeira':            v.cadeira === 'sim' ? 'Sim' : 'Não',
+    'Valor 2ª cadeira':      fmtR(v.valorCadeira),
+    'Pontos total':          parseFloat((v.pts||0).toFixed(1)),
+    'Pt +15k':               v.r2 ? 'Sim' : 'Não',
+    'Pt completo':           v.r3 ? 'Sim' : 'Não',
+    'Pt 2ª cadeira':         v.r4 ? 'Sim' : 'Não',
+  }));
+  const wsDetalhado = XLSX.utils.json_to_sheet(dadosDetalhado);
+  wsDetalhado['!cols'] = [
+    {wch:16},{wch:32},{wch:30},{wch:16},{wch:14},{wch:7},
+    {wch:12},{wch:16},{wch:16},{wch:24},{wch:14},{wch:16},
+    {wch:50},{wch:12},{wch:16},{wch:12},{wch:10},{wch:12},{wch:12}
+  ];
+  XLSX.utils.book_append_sheet(wb, wsDetalhado, 'Vendas Detalhadas');
+
+  // ── ABA 4+: UMA ABA POR CLOSER ─────────────────────────
+  CLOSERS_ALL.forEach(nome => {
+    const minhas = vendas.filter(v => v.closer === nome).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    if (!minhas.length) return;
+    const dados = minhas.map(v => ({
+      'Cliente':         v.cliente || '',
+      'E-mail':          v.email || '',
+      'Telefone':        v.telefone || '',
+      'Data da venda':   fmtD(v.dataVenda),
+      'Hora':            v.hora || '',
+      'Valor da venda':  fmtR(v.valor),
+      'Valor recebido':  fmtR(v.recebido),
+      'Faixa':           v.faixaLabel || '',
+      'Receb. completo': v.completo === 'sim' ? 'Sim' : 'Não',
+      'Valor restante':  fmtR(v.restante),
+      'Observação':      v.negociacao || '',
+      '2ª cadeira':      v.cadeira === 'sim' ? 'Sim' : 'Não',
+      'Pontos':          parseFloat((v.pts||0).toFixed(1)),
+    }));
+    const ws = XLSX.utils.json_to_sheet(dados);
+    ws['!cols'] = [
+      {wch:32},{wch:28},{wch:16},{wch:14},{wch:7},
+      {wch:16},{wch:16},{wch:24},{wch:14},{wch:16},{wch:50},{wch:12},{wch:8}
+    ];
+    // Nome da aba max 31 chars (limite Excel)
+    const nomeAba = nome.length > 31 ? nome.substring(0,31) : nome;
+    XLSX.utils.book_append_sheet(wb, ws, nomeAba);
+  });
 
   // Nome do arquivo com data/hora
   const agora = new Date();
