@@ -160,6 +160,7 @@
     .danger-btn{background:none;border:none;color:#c0392b;font-size:13px;cursor:pointer;font-family:inherit;padding:10px 0;display:block;margin:0 auto;}
     .card-title{font-size:11px;font-weight:700;color:var(--bx-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;}
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -313,6 +314,7 @@
       <div class="card-title" id="vendas-titulo">Histórico de vendas</div>
       <div id="vendas-list"><div class="empty">Carregando...</div></div>
     </div>
+    <button class="btn-primary" id="btn-exportar" style="display:none;margin-bottom:10px;background:var(--bx-green-dark);color:var(--bx-green-light);font-size:14px" onclick="exportarExcel()">📊 Exportar planilha Excel</button>
     <button class="danger-btn" id="btn-limpar" style="display:none" onclick="confirmarLimpar()">Limpar todos os dados</button>
   </div>
 </div>
@@ -416,7 +418,7 @@ const EMAIL_MAP = {
   'admin@sibx.com.br':                 { nome: 'Felipe',        adm: true  },
   'dsgnelias@gmail.com':               { nome: 'Elias',         adm: true  },
   'willysc7@gmail.com':                { nome: 'Willy',         adm: false },
-  'comercial1@comercial10x.com.br':    { nome: 'Renato',        adm: false },
+  'comercial1@comercial10x.com.br':    { nome: 'Renato',        adm: true  },
   'especialista1@comercial10x.com.br': { nome: 'Bruna',         adm: false },
   'especialista2@comercial10x.com.br': { nome: 'Gabriel Jesus', adm: false },
   'especialista5@comercial10x.com.br': { nome: 'Gabriel Aduati',adm: false },
@@ -485,6 +487,7 @@ function mostrarApp(){
   document.getElementById('user-name-display').textContent=currentNome;
   document.getElementById('adm-badge').style.display=currentIsAdm?'inline-block':'none';
   document.getElementById('btn-limpar').style.display=currentIsAdm?'block':'none';
+  document.getElementById('btn-exportar').style.display=currentIsAdm?'block':'none';
   // Ranking visível apenas para ADMs
   const tabRanking=document.getElementById('tab-btn-ranking');
   const screenRanking=document.getElementById('tab-ranking');
@@ -1006,6 +1009,84 @@ window.copiarContrato = function(id) {
     const btn = el.parentElement.querySelector('.contrato-copiar');
     if (btn) { btn.textContent = '✓ copiado!'; setTimeout(() => btn.textContent = 'copiar', 2000); }
   });
+};
+
+// ── EXPORTAR EXCEL ─────────────────────────────────────────
+window.exportarExcel = function() {
+  if (!currentIsAdm) { alert('Sem permissão.'); return; }
+  if (!vendas.length) { alert('Nenhuma venda para exportar.'); return; }
+
+  // Montar linhas da planilha
+  const linhas = vendas.map(v => ({
+    'Closer':            v.closer || '',
+    'Cliente':           v.cliente || '',
+    'E-mail':            v.email || '',
+    'Telefone':          v.telefone || '',
+    'Data da venda':     v.dataVenda ? new Date(v.dataVenda+'T12:00:00').toLocaleDateString('pt-BR') : '',
+    'Hora':              v.hora || '',
+    'Produto':           v.produto || 'DTC Master',
+    'Valor da venda':    v.valor || 0,
+    'Valor recebido':    v.recebido || 0,
+    'Faixa recebimento': v.faixaLabel || '',
+    'Receb. completo':   v.completo === 'sim' ? 'Sim' : 'Não',
+    'Valor restante':    v.restante || 0,
+    'Negociação restante': v.negociacao || '',
+    '2ª cadeira':        v.cadeira === 'sim' ? 'Sim' : 'Não',
+    'Valor 2ª cadeira':  v.valorCadeira || 0,
+    'Pontos':            v.pts || 0,
+    'Pt recorrente':     'Sim',
+    'Pt +15k':           v.r2 ? 'Sim' : 'Não',
+    'Pt completo':       v.r3 ? 'Sim' : 'Não',
+    'Pt 2ª cadeira':     v.r4 ? 'Sim' : 'Não',
+  }));
+
+  // Criar aba de ranking
+  const totals = {};
+  const CLOSERS_ALL = ['Everton','Jezreel','Renato','Felipe','Elias','Ana Luiza','Ani Caroline','Bruna',
+                       'Gabriel Aduati','Gabriel Jesus','Mila','Rodrigo','Willy'];
+  CLOSERS_ALL.forEach(c => { totals[c] = {pts:0, vendas:0, recebido:0, vol:0}; });
+  vendas.forEach(v => {
+    if (totals[v.closer]) {
+      totals[v.closer].pts      += v.pts || 0;
+      totals[v.closer].vendas   += 1;
+      totals[v.closer].recebido += v.recebido || 0;
+      totals[v.closer].vol      += v.valor || 0;
+    }
+  });
+  const ranking = Object.entries(totals)
+    .sort((a,b) => b[1].pts - a[1].pts || b[1].recebido - a[1].recebido)
+    .map(([nome, d], i) => ({
+      'Posição':          i + 1,
+      'Closer':           nome,
+      'Pontos':           parseFloat(d.pts.toFixed(1)),
+      'Nº de Vendas':     d.vendas,
+      'Total Recebido':   d.recebido,
+      'Volume de Vendas': d.vol,
+    }));
+
+  // Criar workbook com 2 abas
+  const wb = XLSX.utils.book_new();
+
+  const wsVendas  = XLSX.utils.json_to_sheet(linhas);
+  const wsRanking = XLSX.utils.json_to_sheet(ranking);
+
+  // Largura das colunas
+  wsVendas['!cols'] = [
+    {wch:14},{wch:30},{wch:28},{wch:16},{wch:14},{wch:7},
+    {wch:12},{wch:14},{wch:14},{wch:22},{wch:14},{wch:14},
+    {wch:40},{wch:12},{wch:16},{wch:7},{wch:10},{wch:8},{wch:10},{wch:12}
+  ];
+  wsRanking['!cols'] = [{wch:8},{wch:16},{wch:8},{wch:12},{wch:16},{wch:16}];
+
+  XLSX.utils.book_append_sheet(wb, wsRanking, 'Ranking');
+  XLSX.utils.book_append_sheet(wb, wsVendas,  'Vendas Detalhadas');
+
+  // Nome do arquivo com data/hora
+  const agora = new Date();
+  const stamp = agora.toLocaleDateString('pt-BR').replace(/\//g,'-') + '_' +
+                agora.getHours().toString().padStart(2,'0') +
+                agora.getMinutes().toString().padStart(2,'0');
+  XLSX.writeFile(wb, `Bruxcon_DTC_Master_${stamp}.xlsx`);
 };
 
 // ── LIMPAR (só ADM) ────────────────────────────────────
