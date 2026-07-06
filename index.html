@@ -136,6 +136,12 @@
     .sale-actions{display:flex;gap:8px;margin-top:8px;}
     .btn-edit{flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--bx-border);background:transparent;color:var(--bx-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;}
     .btn-del{padding:8px 12px;border-radius:8px;border:1px solid #c0392b;background:transparent;color:#e74c3c;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+    .btn-contrato{padding:8px 12px;border-radius:8px;border:1px solid var(--bx-green-dark);background:transparent;color:var(--bx-green);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;}
+    .contrato-box{background:rgba(10,26,15,.6);border:1px solid var(--bx-green-dark);border-radius:8px;padding:12px;margin-top:8px;}
+    .contrato-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+    .contrato-label{font-size:10px;font-weight:700;color:var(--bx-green);text-transform:uppercase;letter-spacing:.08em;}
+    .contrato-copiar{font-size:12px;color:var(--bx-green-light);cursor:pointer;background:none;border:none;font-family:inherit;font-weight:600;}
+    .contrato-texto{font-size:12px;color:var(--bx-text);line-height:1.6;}
 
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:flex-end;justify-content:center;}
     .modal-overlay.open{display:flex;}
@@ -754,10 +760,18 @@ function renderVendas(){
         ${v.r4?` · <span style="color:var(--bx-green-light)">✓ 2ª cadeira (${fmtVal(v.valorCadeira||0)})</span>`:''}
         ${v.negociacao?`<br><span class="nego-tag">Restante ${fmtVal(v.restante)}: ${v.negociacao}</span>`:''}
       </div>
-      ${podeEditar?`<div class="sale-actions">
-        <button class="btn-edit" onclick="abrirEdicao('${v._id}')">✏️ Editar</button>
+      <div class="sale-actions">
+        ${podeEditar?`<button class="btn-edit" onclick="abrirEdicao('${v._id}')">✏️ Editar</button>`:''}
+        <button class="btn-contrato" onclick="toggleContrato('${v._id}')">📄 Contrato</button>
         ${currentIsAdm?`<button class="btn-del" onclick="excluirVenda('${v._id}','${v.cliente}')">🗑️</button>`:''}
-      </div>`:''}
+      </div>
+      <div class="contrato-box" id="contrato-${v._id}" style="display:none">
+        <div class="contrato-header">
+          <span class="contrato-label">Texto p/ contrato</span>
+          <button class="contrato-copiar" onclick="copiarContrato('${v._id}')">copiar</button>
+        </div>
+        <div class="contrato-texto" id="contrato-txt-${v._id}">${gerarTextoContrato(v)}</div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -886,6 +900,112 @@ window.trocarSenha = async function(){
     };
     errEl.textContent = msgs[e.code] || 'Erro ao atualizar senha. Tente novamente.';
   }
+};
+
+// ── CONTRATO ───────────────────────────────────────────────
+function numeroParaExtenso(valor) {
+  const unidades = ['','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez',
+    'onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];
+  const dezenas  = ['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];
+  const centenas = ['','cem','duzentos','trezentos','quatrocentos','quinhentos',
+    'seiscentos','setecentos','oitocentos','novecentos'];
+
+  if (valor === 0) return 'zero';
+
+  function grupo(n) {
+    if (n === 100) return 'cem';
+    let r = '';
+    const c = Math.floor(n / 100);
+    const d = Math.floor((n % 100) / 10);
+    const u = n % 10;
+    if (c) r += centenas[c];
+    if (d >= 2) {
+      if (c) r += ' e ';
+      r += dezenas[d];
+      if (u) r += ' e ' + unidades[u];
+    } else if (d === 1) {
+      if (c) r += ' e ';
+      r += unidades[10 + u];
+    } else if (u) {
+      if (c) r += ' e ';
+      r += unidades[u];
+    }
+    return r;
+  }
+
+  const inteiro = Math.floor(valor);
+  const centavos = Math.round((valor - inteiro) * 100);
+  const mil  = Math.floor(inteiro / 1000);
+  const cent = inteiro % 1000;
+  let resultado = '';
+  if (mil > 0)  resultado += (mil === 1 ? 'mil' : grupo(mil) + ' mil');
+  if (cent > 0) resultado += (resultado ? ' e ' : '') + grupo(cent);
+  resultado = resultado.charAt(0).toUpperCase() + resultado.slice(1);
+  if (centavos > 0) resultado += ' reais e ' + grupo(centavos) + ' centavos';
+  else resultado += ' reais';
+  return resultado;
+}
+
+function fmtValContrato(v) {
+  return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function gerarTextoContrato(v) {
+  const valorTotal   = v.valor || 0;
+  const valorRecebido= v.recebido || 0;
+  const restante     = v.restante || (valorTotal - valorRecebido);
+  const temRestante  = restante > 0 && v.completo !== 'sim';
+
+  // Texto base: entrada + condições do restante
+  let texto = '';
+
+  if (!temRestante) {
+    // Pagamento integral
+    texto = `O valor total da venda, correspondente a ${fmtValContrato(valorTotal)} (${numeroParaExtenso(valorTotal)}), foi integralmente quitado mediante entrada.`;
+  } else {
+    // Entrada + restante
+    texto = `Entrada no valor de ${fmtValContrato(valorRecebido)} (${numeroParaExtenso(valorRecebido)})`;
+    if (v.negociacao) {
+      texto += ` e o valor de ${fmtValContrato(restante)} (${numeroParaExtenso(restante)}) ${v.negociacao}.`;
+    } else {
+      texto += ` e o saldo restante de ${fmtValContrato(restante)} (${numeroParaExtenso(restante)}) a ser negociado.`;
+    }
+  }
+
+  // 2ª cadeira
+  if (v.r4 && v.valorCadeira) {
+    texto += ` Inclui 2ª cadeira no valor de ${fmtValContrato(v.valorCadeira)} (${numeroParaExtenso(v.valorCadeira)}).`;
+  }
+
+  return texto;
+}
+
+window.toggleContrato = function(id) {
+  const box = document.getElementById('contrato-' + id);
+  if (!box) return;
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+};
+
+window.copiarContrato = function(id) {
+  const el = document.getElementById('contrato-txt-' + id);
+  if (!el) return;
+  const texto = el.textContent;
+  navigator.clipboard.writeText(texto).then(() => {
+    const btn = el.parentElement.querySelector('.contrato-copiar');
+    if (btn) { btn.textContent = '✓ copiado!'; setTimeout(() => btn.textContent = 'copiar', 2000); }
+  }).catch(() => {
+    // fallback para dispositivos sem clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = el.parentElement.querySelector('.contrato-copiar');
+    if (btn) { btn.textContent = '✓ copiado!'; setTimeout(() => btn.textContent = 'copiar', 2000); }
+  });
 };
 
 // ── LIMPAR (só ADM) ────────────────────────────────────
