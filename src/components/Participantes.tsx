@@ -165,7 +165,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
 
   if (inscritos === null) return <Empty>Carregando…</Empty>;
   if (!inscritos.length) {
-    return <Empty>Nenhum participante importado. Um admin pode subir o painel na aba Análise.</Empty>;
+    return <Empty>Nenhum participante importado. Um admin pode subir a planilha (ou o HTML do painel) na aba Análise.</Empty>;
   }
 
   if (aberto) {

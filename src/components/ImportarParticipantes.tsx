@@ -70,7 +70,9 @@ export function ImportarParticipantes({
         toast(
           "sucesso",
           `${dados.resumo.gravados} participantes importados.`,
-          "Os crachás já podem ser lidos no Registrar."
+          dados.resumo.inscritos
+            ? "Os crachás já podem ser lidos no Registrar, e as abas Participantes e Análise já estão atualizadas."
+            : "Os crachás já podem ser lidos no Registrar."
         );
       }
     } catch (e) {
@@ -137,14 +139,14 @@ export function ImportarParticipantes({
               <>
                 <Upload className="h-7 w-7 text-muted-foreground" />
                 <span className="text-sm font-medium">Escolher planilha</span>
-                <span className="text-xs text-muted-foreground">.xlsx até 10 MB</span>
+                <span className="text-xs text-muted-foreground">.xlsx ou .csv até 10 MB</span>
               </>
             )}
           </button>
           <input
             ref={inputRef}
             type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
             className="hidden"
             onChange={(e) => {
               setArquivo(e.target.files?.[0] ?? null);
@@ -157,7 +159,8 @@ export function ImportarParticipantes({
             Precisa ter uma coluna com o código do crachá (<strong>eTicket</strong>,{" "}
             <strong>Ticket</strong>, <strong>Código</strong> ou <strong>Crachá</strong>) e uma de{" "}
             <strong>Nome</strong>. As outras — CPF, telefone, e-mail, classificação — entram se
-            existirem. Acento e maiúscula no cabeçalho não importam.
+            existirem. Acento e maiúscula no cabeçalho não importam. Com e-mail e Check-in D1/D2/D3, a
+            mesma planilha atualiza também as abas Participantes e Análise.
           </div>
         </>
       )}

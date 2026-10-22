@@ -66,7 +66,16 @@ export function Analise({ evento, vendas, perfil }: { evento: Evento; vendas: Ve
       });
       const corpo = await res.json();
       if (!res.ok) throw new Error(corpo.error || `Erro ${res.status}.`);
-      toast("sucesso", `${corpo.importados} inscritos importados.`, corpo.descartados ? `${corpo.descartados} linha(s) sem e-mail ignorada(s).` : undefined);
+      if (corpo.planilha) {
+        const detalhes = [
+          `${corpo.novos} novos, ${corpo.atualizados} atualizados.`,
+          corpo.crachas ? `${corpo.crachas} crachás prontos para o QR.` : "",
+          corpo.descartados ? `${corpo.descartados} linha(s) sem e-mail ignorada(s).` : "",
+        ];
+        toast("sucesso", `${corpo.importados} participantes atualizados.`, detalhes.filter(Boolean).join(" "));
+      } else {
+        toast("sucesso", `${corpo.importados} inscritos importados.`, corpo.descartados ? `${corpo.descartados} linha(s) sem e-mail ignorada(s).` : undefined);
+      }
       await carregar();
     } catch (e) {
       toast("erro", "Não foi possível importar.", (e as Error).message);
@@ -216,8 +225,10 @@ export function Analise({ evento, vendas, perfil }: { evento: Evento; vendas: Ve
         <CardContent className="pt-4">
           <SectionLabel>Atualizar base de inscritos</SectionLabel>
           <p className="mt-1 text-sm text-muted">
-            Suba o <span className="num">index.html</span> do painel de conversão para atualizar os dados. A
-            importação substitui a base deste evento inteira — os números acima recalculam sozinhos.
+            Suba a <strong>planilha de participantes</strong> (.xlsx ou .csv) ou o{" "}
+            <span className="num">index.html</span> do painel de conversão. A planilha soma e atualiza
+            pessoas, ingresso e check-in sem apagar o Lead Score; o HTML substitui a base inteira. Os
+            números acima recalculam sozinhos.
           </p>
           {atualizadoEm && (
             <p className="num mt-2 text-xs text-muted">
@@ -227,13 +238,13 @@ export function Analise({ evento, vendas, perfil }: { evento: Evento; vendas: Ve
           <input
             ref={inputRef}
             type="file"
-            accept=".html,.htm,.json"
+            accept=".xlsx,.csv,.html,.htm,.json"
             className="hidden"
             onChange={(e) => e.target.files?.[0] && importar(e.target.files[0])}
           />
           <Button variant="outline" full className="mt-3" disabled={ocupado} onClick={() => inputRef.current?.click()}>
             <Upload className="h-4 w-4" />
-            {ocupado ? "Importando..." : inscritos?.length ? "Subir novo HTML" : "Importar painel"}
+            {ocupado ? "Importando..." : "Subir planilha ou HTML"}
           </Button>
         </CardContent>
       </Card>

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import ExcelJS from "exceljs";
 import { ErroApi, autenticar, responderErro } from "@/lib/api-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -7,6 +6,8 @@ import {
   interpretarPlanilha,
   type LinhaPlanilha,
 } from "@/lib/importacao-leads";
+import { lerPlanilha } from "@/lib/ler-planilha";
+import { gravarLeads, sincronizarInscritos } from "@/lib/gravar-importacao";
 
 export const runtime = "nodejs";
 // Planilha de 900 linhas leva mais que o padrão de 10s da plataforma.
@@ -15,7 +16,8 @@ export const maxDuration = 60;
 const TAMANHO_MAXIMO = 10 * 1024 * 1024; // 10 MB
 
 /**
- * POST /api/leads/importar — sobe a planilha de participantes de um evento.
+ * POST /api/leads/importar — sobe a planilha de participantes de um evento
+ * (.xlsx ou .csv). Grava os crachás e, se houver e-mail, a base de inscritos.
  *
  * A leitura do arquivo acontece AQUI, não no navegador: o app é usado no
  * celular, e mandar um parser de xlsx para dentro do bundle penalizaria
@@ -47,51 +49,30 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
     if (!evento) throw new ErroApi(404, "Evento não encontrado.");
 
-    // ── Ler a planilha ───────────────────────────────────────────────
-    const wb = new ExcelJS.Workbook();
+    // ── Ler a planilha (.xlsx ou .csv) ───────────────────────────────
+    let linhas: LinhaPlanilha[];
     try {
-      await wb.xlsx.load(await arquivo.arrayBuffer());
-    } catch {
-      throw new ErroApi(400, "Não consegui abrir o arquivo. Ele é mesmo um .xlsx?");
+      linhas = await lerPlanilha(arquivo);
+    } catch (e) {
+      throw new ErroApi(400, (e as Error).message);
     }
-
-    const aba = wb.worksheets[0];
-    if (!aba) throw new ErroApi(400, "A planilha não tem nenhuma aba.");
-
-    const cabecalhos: string[] = [];
-    aba.getRow(1).eachCell((celula, col) => {
-      cabecalhos[col - 1] = String(celula.value ?? "").trim();
-    });
-
-    const linhas: LinhaPlanilha[] = [];
-    aba.eachRow((linha, numero) => {
-      if (numero === 1) return;
-      const obj: LinhaPlanilha = {};
-      cabecalhos.forEach((cab, i) => {
-        if (!cab) return;
-        const v = linha.getCell(i + 1).value;
-        // Célula de e-mail vem como objeto de hyperlink; interessa o texto.
-        obj[cab] =
-          v && typeof v === "object" && "text" in v
-            ? (v as { text: unknown }).text
-            : (v as unknown);
-      });
-      linhas.push(obj);
-    });
 
     const relatorio = interpretarPlanilha(linhas);
     const erro = erroDeEstrutura(relatorio);
     if (erro) throw new ErroApi(422, erro);
 
     // ── Prévia: mostra o que vai acontecer antes de gravar ───────────
+    // Em lotes: 900 códigos numa URL só passam do limite do servidor.
     const codigos = relatorio.leads.map((l) => l.codigoCracha);
-    const { data: existentes } = await admin
-      .from("leads")
-      .select("codigo_cracha")
-      .eq("evento_id", eventoId)
-      .in("codigo_cracha", codigos);
-
-    const jaExistem = new Set((existentes ?? []).map((l) => l.codigo_cracha as string));
+    const jaExistem = new Set<string>();
+    for (let i = 0; i < codigos.length; i += 200) {
+      const { data: existentes } = await admin
+        .from("leads")
+        .select("codigo_cracha")
+        .eq("evento_id", eventoId)
+        .in("codigo_cracha", codigos.slice(i, i + 200));
+      for (const l of existentes ?? []) jaExistem.add(l.codigo_cracha as string);
+    }
     const novos = relatorio.leads.filter((l) => !jaExistem.has(l.codigoCracha)).length;
 
     const resumo = {
@@ -112,26 +93,25 @@ export async function POST(req: NextRequest) {
     // Upsert por (evento, crachá): reenviar a planilha atualiza quem já
     // está lá em vez de duplicar, e é assim que o time reimporta durante o
     // evento conforme os ingressos vão sendo emitidos.
-    let gravados = 0;
-    for (let i = 0; i < relatorio.leads.length; i += 500) {
-      const lote = relatorio.leads.slice(i, i + 500).map((l) => ({
-        evento_id: eventoId,
-        codigo_cracha: l.codigoCracha,
-        nome: l.nome,
-        email: l.email,
-        cpf: l.cpf,
-        telefone: l.telefone,
-        tipo: l.tipo,
-        especialidade: l.especialidade,
-      }));
-      const { error } = await admin
-        .from("leads")
-        .upsert(lote, { onConflict: "evento_id,codigo_cracha" });
-      if (error) throw new ErroApi(500, `Falha ao gravar: ${error.message}`);
-      gravados += lote.length;
+    let gravados: number;
+    try {
+      gravados = await gravarLeads(admin, eventoId, relatorio.leads);
+    } catch (e) {
+      throw new ErroApi(500, (e as Error).message);
     }
 
-    return NextResponse.json({ previa: false, resumo: { ...resumo, gravados } });
+    // A mesma planilha alimenta as abas Participantes e Análise. Sem coluna
+    // de e-mail não há como casar com os inscritos — os crachás já foram.
+    let inscritos: Awaited<ReturnType<typeof sincronizarInscritos>> | null = null;
+    if (relatorio.colunasEncontradas.email) {
+      try {
+        inscritos = await sincronizarInscritos(admin, eventoId, linhas);
+      } catch (e) {
+        throw new ErroApi(500, "Crachás importados, mas a lista de participantes falhou: " + (e as Error).message);
+      }
+    }
+
+    return NextResponse.json({ previa: false, resumo: { ...resumo, gravados, inscritos } });
   } catch (e) {
     return responderErro(e);
   }

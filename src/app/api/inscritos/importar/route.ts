@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { ErroApi, autenticar, responderErro } from "@/lib/api-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { extrairInscritosDoPainel, type Inscrito } from "@/lib/analise";
+import { erroDeEstrutura, interpretarPlanilha } from "@/lib/importacao-leads";
+import { ehPlanilha, lerPlanilha } from "@/lib/ler-planilha";
+import { gravarLeads, sincronizarInscritos } from "@/lib/gravar-importacao";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -14,6 +17,10 @@ const TAMANHO_MAXIMO = 20 * 1024 * 1024; // o index.html do painel passa de 800 
  *
  * Substitui a base inteira do evento a cada importação: o painel é a fonte
  * da verdade, e importações parciais deixariam inscritos fantasmas.
+ *
+ * Também aceita a planilha de participantes (.xlsx/.csv). Ela não tem Lead
+ * Score, então MESCLA na base em vez de substituir (ver planilha-inscritos),
+ * e, se tiver a coluna eTicket, atualiza junto os crachás do QR.
  * A gravação usa a service role porque `inscritos` não tem policy de
  * escrita — de propósito, ver a migração 0011.
  */
@@ -34,6 +41,26 @@ export async function POST(req: NextRequest) {
     const admin = supabaseAdmin();
     const { data: evento } = await admin.from("eventos").select("id").eq("id", eventoId).maybeSingle();
     if (!evento) throw new ErroApi(404, "Evento não encontrado.");
+
+    if (ehPlanilha(arquivo.name)) {
+      let linhas;
+      try {
+        linhas = await lerPlanilha(arquivo);
+      } catch (e) {
+        throw new ErroApi(400, (e as Error).message);
+      }
+      let resultado;
+      try {
+        resultado = await sincronizarInscritos(admin, eventoId, linhas);
+      } catch (e) {
+        throw new ErroApi(400, (e as Error).message);
+      }
+      // Crachás só se a planilha estiver inteira em ordem: a prévia detalhada
+      // dos problemas fica na tela de importar participantes.
+      const relatorio = interpretarPlanilha(linhas);
+      const crachas = erroDeEstrutura(relatorio) ? 0 : await gravarLeads(admin, eventoId, relatorio.leads);
+      return NextResponse.json({ ...resultado, crachas, planilha: true });
+    }
 
     let inscritos: Inscrito[];
     let descartados: number;
