@@ -7,13 +7,13 @@ Usado no celular, em pé, no salão do evento — por isso tudo é coluna única
 alvo de toque grande e fonte 16px nos campos (abaixo disso o Safari do iPhone
 dá zoom sozinho ao focar).
 
-> **v2.** Até aqui o Bruxcon era um `index.html` único com Firebase (guardado
-> em [`legado/index-firebase.html`](legado/index-firebase.html)). Esta versão
+> **v2.** Até aqui o Bruxcon era um `index.html` único com Firebase (está no
+> histórico do git). Esta versão
 > traz para cá a base do app **AVA Comercial**, que nasceu justamente dessa
 > v1: o que lá era constante de código (`EMAIL_MAP`, `CLOSERS`,
 > `FAIXA_LABELS`, `getPts`) virou dado no banco. A pontuação e as faixas do
-> DTC Master continuam exatamente as mesmas. Para migrar, veja
-> [`BANCO-DE-DADOS.md`](BANCO-DE-DADOS.md).
+> DTC Master continuam exatamente as mesmas. O Firebase saiu: tudo roda no
+> Supabase, começando do zero. Ver [`BANCO-DE-DADOS.md`](BANCO-DE-DADOS.md).
 
 ## Projeto → evento
 
@@ -140,8 +140,7 @@ utilitários soltos — ela carrega as regras que o mobile exige.
 ## Scripts
 
 `scripts/` tem as ferramentas de manutenção — importar participantes por
-planilha, copiar as vendas do Firebase da v1 (`migrar-firebase.mjs`), gerar
-catálogo de links para um vendedor, distribuir uma oferta para
+planilha, cadastrar a equipe da v1 (`criar-usuarios.mjs`), gerar catálogo de links para um vendedor, distribuir uma oferta para
 todos, corrigir código de oferta, resetar senha.
 
 Todos são **simulação por padrão** e só gravam com `--apply`.

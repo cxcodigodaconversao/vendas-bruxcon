@@ -42,7 +42,7 @@ if (!URL || !CHAVE) {
 const sb = createClient(URL, CHAVE, { auth: { persistSession: false } });
 
 // ── Equipe da v1 ────────────────────────────────────────────────────────
-// Cópia do EMAIL_MAP do Bruxcon v1 (legado/index-firebase.html). `adm: true`
+// Cópia do EMAIL_MAP do Bruxcon v1 (o index.html antigo, no histórico do git). `adm: true`
 // vira papel "admin"; o resto vira "closer" — quem for gestor, o admin
 // ajusta na tela. O `sck` é o token da Hotmart; se o Bruxcon não vender
 // por link, ele só é usado no nome do link e pode ficar como está.

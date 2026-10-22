@@ -1,8 +1,7 @@
 # Subindo o banco do zero
 
-Este projeto nasce com o banco **vazio**. As vendas que já existem no
-Bruxcon v1 (Firebase) são copiadas no passo 6, por script, sem perder a
-pontuação que estava no ranking.
+Este projeto nasce com o banco **vazio** e roda só no Supabase. As vendas
+do Bruxcon v1 (Firebase) não são copiadas: a operação começa do zero.
 
 ## Passo a passo
 
@@ -50,18 +49,7 @@ node scripts/criar-usuarios.mjs --apply    # anote as senhas impressas
 5. Entre no app, escolha **DTC Master** e cadastre o evento pela tela
    (ex.: slug `bruxcon-2026`). Se o Bruxcon vender por link da Hotmart,
    cadastre antes o catálogo de ofertas no ícone de link do projeto.
-6. Copie as vendas do Firebase para esse evento, com o login de um admin
-   da v1 (o mesmo e-mail e senha do app antigo):
-
-```bash
-node scripts/migrar-firebase.mjs --evento bruxcon-2026 --email SEU@EMAIL --senha SUA_SENHA
-# confira a tabela com o ranking da v1 e então:
-node scripts/migrar-firebase.mjs --evento bruxcon-2026 --email SEU@EMAIL --senha SUA_SENHA --apply
-```
-
-   O script é idempotente (rodar de novo não duplica) e aponta vendas cujo
-   vendedor não está cadastrado.
-7. Participantes e Análise: importe a planilha .xlsx na tela de importação e
+6. Participantes e Análise: importe a planilha .xlsx na tela de importação e
    suba o `index.html` do painel de conversão na aba Análise.
 
 ## Publicar no Netlify
