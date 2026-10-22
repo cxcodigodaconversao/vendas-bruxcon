@@ -56,7 +56,7 @@ export function SeletorProjeto({
           <Logo size={30} />
         )}
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold leading-tight">Bruxcon Comercial</span>
+          <span className="block truncate text-sm font-semibold leading-tight">DTC Master</span>
           <span className="block truncate text-[11px] leading-tight text-muted-foreground">
             {perfil.nome} · {PAPEL_LABEL[perfil.papel]}
           </span>
@@ -71,7 +71,7 @@ export function SeletorProjeto({
       </header>
 
       <main className="flex-1 p-3" style={{ paddingBottom: "calc(0.75rem + var(--safe-bottom))" }}>
-        <p className="eyebrow mb-1 mt-2">Bruxcon</p>
+        <p className="eyebrow mb-1 mt-2">DTC Master</p>
         <h1 className="display mb-4 text-2xl leading-tight">Em qual projeto você vai trabalhar?</h1>
 
         {!projetos.length ? (

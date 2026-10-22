@@ -1,23 +1,17 @@
 /**
- * Marca do app. Quadrado na cor `--brand` com a sigla do PROJETO selecionado
- * (DTC…) — sem projeto, mostra "BX", da Bruxcon.
+ * Marca do app: quadrado na cor `--brand` com "DTC", do DTC Master — a mesma
+ * em todas as telas, com ou sem projeto selecionado.
  *
  * A cor pertence ao projeto, não ao app: é o que diz ao vendedor, de
  * relance, em qual produto ele está lançando a venda.
  */
 export function Logo({
   size = 32,
-  sigla,
   className,
 }: {
   size?: number;
-  /** Sigla do projeto selecionado. Ausente = marca do grupo. */
-  sigla?: string;
   className?: string;
 }) {
-  const texto = (sigla || "BX").toUpperCase().slice(0, 4);
-  // Quatro letras precisam caber no mesmo quadrado que três.
-  const fonte = texto.length >= 4 ? 11 : texto.length === 3 ? 13.5 : 16;
 
   return (
     <svg
@@ -28,7 +22,7 @@ export function Logo({
       className={className}
       style={{ flexShrink: 0 }}
       role="img"
-      aria-label={sigla ? `Projeto ${texto}` : "Bruxcon"}
+      aria-label="DTC Master"
     >
       <rect width="40" height="40" rx="9" fill="var(--brand)" />
       <text
@@ -38,11 +32,11 @@ export function Logo({
         dominantBaseline="central"
         fontFamily="var(--font-geist-mono), ui-monospace, monospace"
         fontWeight="700"
-        fontSize={fonte}
+        fontSize={13.5}
         letterSpacing="0.5"
         fill="var(--accent-foreground)"
       >
-        {texto}
+        DTC
       </text>
       {/* Linha de base: o traço que a marca carrega em todos os projetos. */}
       <path

@@ -9,10 +9,10 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Bruxcon Comercial",
-    short_name: "Bruxcon",
+    name: "DTC Master",
+    short_name: "DTC Master",
     description:
-      "Registro de vendas, pontuação, metas e links de pagamento dos produtos da Bruxcon",
+      "Registro de vendas, pontuação, metas e links de pagamento do DTC Master",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

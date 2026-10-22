@@ -120,7 +120,7 @@ export function AppShell({ perfil }: { perfil: Usuario }) {
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-[480px] flex-col">
       <header className="sticky top-0 z-20 flex items-center gap-2.5 border-b border-border bg-background px-3 py-2.5">
-        <Logo size={30} sigla={projeto.sigla} />
+        <Logo size={30} />
 
         <button
           className="flex min-w-0 flex-1 items-center gap-1 text-left"

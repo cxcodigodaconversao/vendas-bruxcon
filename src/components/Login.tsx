@@ -51,8 +51,8 @@ export function Login({ initialError = "" }: { initialError?: string }) {
         <div className="mb-3 flex justify-center">
           <Logo size={54} />
         </div>
-        <h1 className="display text-3xl leading-none">Bruxcon Comercial</h1>
-        <p className="eyebrow mt-2">International Bruxism Convention · Vendas · Pontuação · Metas</p>
+        <h1 className="display text-3xl leading-none">DTC Master</h1>
+        <p className="eyebrow mt-2">Vendas · Pontuação · Metas</p>
       </div>
 
       <form

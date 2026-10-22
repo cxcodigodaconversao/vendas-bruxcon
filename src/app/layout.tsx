@@ -12,11 +12,11 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "Bruxcon Comercial",
+  title: "DTC Master",
   description:
-    "Registro de vendas, pontuação, metas e links de pagamento dos produtos da Bruxcon (DTC Master)",
+    "Registro de vendas, pontuação, metas e links de pagamento do DTC Master",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Bruxcon Comercial" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "DTC Master" },
 };
 
 export const viewport: Viewport = {
