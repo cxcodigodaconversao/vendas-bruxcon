@@ -125,6 +125,7 @@ export function Analise({ evento, vendas, perfil }: { evento: Evento; vendas: Ve
               <div className="mt-2 flex gap-2">
                 <Kpi valor={String(a.total)} rotulo="Inscritos" />
                 <Kpi valor={String(a.comNota)} rotulo="Respondeu formulário" />
+                <Kpi valor={String(a.membrosMaster)} rotulo="Membro Master" />
                 <Kpi valor={String(a.jaAlunos)} rotulo="Já alunos" />
               </div>
               <div className="mt-3 flex gap-2 border-t border-border pt-3">
@@ -153,9 +154,10 @@ export function Analise({ evento, vendas, perfil }: { evento: Evento; vendas: Ve
 
               {/* Presentes abertos em aluno / não aluno: é a pergunta que o
                   time faz no salão ("quanto de gente nova tem aqui hoje?"). */}
-              <SectionLabel className="mt-4">Presentes · alunos e não alunos</SectionLabel>
+              <SectionLabel className="mt-4">Presentes · Master, alunos e não alunos</SectionLabel>
               <div className="mt-2 flex gap-2">
                 <Kpi valor={String(a.presenca.presentes)} rotulo="Presentes" />
+                <Kpi valor={String(a.presenca.masters)} rotulo="Membro Master" />
                 <Kpi valor={String(a.presenca.alunos)} rotulo="Alunos" />
                 <Kpi valor={String(a.presenca.naoAlunos)} rotulo="Não alunos" />
                 <Kpi valor={String(a.presenca.semResposta)} rotulo="Sem resposta" />
@@ -166,7 +168,7 @@ export function Analise({ evento, vendas, perfil }: { evento: Evento; vendas: Ve
                 ))}
               </div>
               <p className="mt-2 text-xs text-muted">
-                Aluno / não aluno só para quem respondeu no formulário. Os dias vêm do painel importado.
+                Membro Master fica separado de Alunos. Aluno / não aluno só para quem respondeu no formulário. Os dias vêm do painel importado.
               </p>
 
               {/* Frequência: % por dia (um presente conta em vários dias) e
@@ -284,20 +286,21 @@ function BarraClasse({ classe, n, max, vendas, conversao }: { classe: Classe; n:
   );
 }
 
-/** Barra de um dia: aluno (cheio), não aluno (claro), sem resposta (fundo). */
-function BarraAlunos({ rotulo, n, alunos, naoAlunos, semResposta }: { rotulo: string; n: number; alunos: number; naoAlunos: number; semResposta: number }) {
+/** Barra de um dia: Master (escuro), aluno (cheio), não aluno (claro), sem resposta (fundo). */
+function BarraAlunos({ rotulo, n, masters, alunos, naoAlunos, semResposta }: { rotulo: string; n: number; masters: number; alunos: number; naoAlunos: number; semResposta: number }) {
   const w = (parte: number) => (n > 0 ? `${Math.round((parte / n) * 100)}%` : "0%");
   return (
     <div className="flex items-center gap-2 text-sm">
       <span className="w-12 shrink-0">{rotulo}</span>
       <div className="flex h-4 flex-1 overflow-hidden rounded bg-border/40">
+        <div className="h-full bg-foreground" style={{ width: w(masters) }} title={`${masters} Membro Master`} />
         <div className="h-full bg-accent" style={{ width: w(alunos) }} title={`${alunos} alunos`} />
         <div className="h-full bg-accent/35" style={{ width: w(naoAlunos) }} title={`${naoAlunos} não alunos`} />
       </div>
       <span className="num w-32 text-right text-xs">
         {n > 0 ? (
           <>
-            {n} <span className="text-muted">· {alunos} al · {naoAlunos} não{semResposta ? ` · ${semResposta} s/r` : ""}</span>
+            {n} <span className="text-muted">· {masters ? `${masters} M · ` : ""}{alunos} al · {naoAlunos} não{semResposta ? ` · ${semResposta} s/r` : ""}</span>
           </>
         ) : (
           "—"

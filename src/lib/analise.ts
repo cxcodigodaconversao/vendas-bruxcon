@@ -13,7 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import type { Venda } from "./types";
-import { resumoPresenca, type ResumoPresenca } from "./participantes";
+import { ehMembroMaster, resumoPresenca, type ResumoPresenca } from "./participantes";
 
 export const CLASSES = ["AA", "A", "B", "C", "D", "E", "F", "X"] as const;
 export type Classe = (typeof CLASSES)[number];
@@ -162,7 +162,8 @@ export type Analise = {
   mqlTop: number;      // AA + A + B  (mesma definição do painel)
   mqlAmplo: number;    // AA + A + B + C
   pctMqlTop: number;   // sobre quem tem nota
-  jaAlunos: number;
+  jaAlunos: number;   // alunos da casa, sem os Membros Master
+  membrosMaster: number;
   porClasse: { classe: Classe; n: number; vendas: number; conversao: number }[];
   checkin: { feito: number; d1: number; d2: number; d3: number; pctFeito: number };
   /** Presentes abertos em aluno / não aluno, no total e por dia. */
@@ -243,7 +244,8 @@ export function calcularAnalise(inscritos: Inscrito[], vendas: Venda[]): Analise
     mqlTop,
     mqlAmplo,
     pctMqlTop: pct(mqlTop, comNota),
-    jaAlunos: inscritos.filter((i) => i.jaAluno === true).length,
+    jaAlunos: inscritos.filter((i) => i.jaAluno === true && !ehMembroMaster(i)).length,
+    membrosMaster: inscritos.filter(ehMembroMaster).length,
     porClasse,
     checkin: {
       feito: checkinFeito,

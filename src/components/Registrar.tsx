@@ -5,7 +5,7 @@ import { ScanLine } from "lucide-react";
 import { supabase } from "@/lib/supabase/cliente";
 import { SELECT_INSCRITO, SELECT_LEAD, vendaParaLinha } from "@/lib/consultas";
 import { normalizarEmail, type Inscrito } from "@/lib/analise";
-import { fichaDoInscrito } from "@/lib/participantes";
+import { ehMembroMaster, fichaDoInscrito } from "@/lib/participantes";
 import { fmtPts } from "@/lib/config";
 import { calcularPontos, type ContextoVenda } from "@/lib/pontuacao";
 import type { Evento, Lead, Usuario } from "@/lib/types";
@@ -330,6 +330,7 @@ function RespostasDoLead({ inscrito: i }: { inscrito: Inscrito }) {
       <summary className="cursor-pointer font-medium">
         Lead Score <span className="num">{i.classe}</span>
         {i.nota !== null && <span className="num"> · {i.nota}</span>}
+        {ehMembroMaster(i) && <span> · Membro Master</span>}
         <span className="text-xs font-normal text-muted-foreground"> · ver respostas</span>
       </summary>
       {fichaDoInscrito(i).map((secao) => (

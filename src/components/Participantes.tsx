@@ -14,6 +14,7 @@ import {
   camposDisponiveis,
   fichaDoInscrito,
   ehAluno,
+  ehMembroMaster,
   ehNaoAluno,
   filtrarAluno,
   filtrarClasse,
@@ -171,6 +172,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
 
   /** Contadores dos chips: presentes vêm do painel importado, não do app. */
   const resumo = useMemo(() => (inscritos ? resumoPresenca(inscritos) : null), [inscritos]);
+  const nMaster = useMemo(() => (inscritos ? inscritos.filter(ehMembroMaster).length : 0), [inscritos]);
   const campos = useMemo(() => (inscritos ? camposDisponiveis(inscritos) : []), [inscritos]);
   const valores = useMemo(
     () => (inscritos && campoResp ? valoresDoCampo(inscritos, campoResp) : []),
@@ -261,7 +263,8 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
               valor={aluno}
               onChange={setAluno}
               opcoes={[
-                { valor: "todos", label: "Alunos e não alunos" },
+                { valor: "todos", label: "Todos" },
+                { valor: "master", label: `Membro Master · ${nMaster}` },
                 { valor: "alunos", label: "Alunos" },
                 { valor: "nao_alunos", label: "Não alunos" },
               ]}
@@ -336,7 +339,8 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
             {filtrando ? " (filtrado)" : ""}
             {presenca === "presentes" && resumo && (
               <>
-                {" "}· {resumo.alunos} aluno{resumo.alunos === 1 ? "" : "s"}, {resumo.naoAlunos} não
+                {" "}· {resumo.masters ? `${resumo.masters} Membro Master, ` : ""}
+                {resumo.alunos} aluno{resumo.alunos === 1 ? "" : "s"}, {resumo.naoAlunos} não
                 {resumo.semResposta > 0 ? `, ${resumo.semResposta} sem resposta` : ""}
               </>
             )}
@@ -387,6 +391,11 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
                     </Badge>
                   ))}
                   {/* Sem resposta no formulário = sem selo, de propósito. */}
+                  {ehMembroMaster(i) && (
+                    <Badge tone="brand" className="whitespace-nowrap">
+                      Membro Master
+                    </Badge>
+                  )}
                   {ehAluno(i) && <Badge tone="accent">Aluno</Badge>}
                   {ehNaoAluno(i) && (
                     <Badge tone="outline" className="whitespace-nowrap">

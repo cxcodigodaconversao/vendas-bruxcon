@@ -14,6 +14,7 @@ import {
   filtrarResposta,
   valoresDoCampo,
   ehAluno,
+  ehMembroMaster,
   estaPresente,
   filtrarAluno,
   filtrarParticipantes,
@@ -110,10 +111,23 @@ describe("presença e aluno", () => {
     expect(r.naoAlunos).toBe(1);
     expect(r.semResposta).toBe(1);
     expect(r.porDia).toEqual([
-      { dia: 1, n: 1, alunos: 1, naoAlunos: 0, semResposta: 0 },
-      { dia: 2, n: 1, alunos: 1, naoAlunos: 0, semResposta: 0 },
-      { dia: 3, n: 1, alunos: 0, naoAlunos: 1, semResposta: 0 },
+      { dia: 1, n: 1, masters: 0, alunos: 1, naoAlunos: 0, semResposta: 0 },
+      { dia: 2, n: 1, masters: 0, alunos: 1, naoAlunos: 0, semResposta: 0 },
+      { dia: 3, n: 1, masters: 0, alunos: 0, naoAlunos: 1, semResposta: 0 },
     ]);
+  });
+
+  it("Membro Master fica separado de Alunos, mesmo sendo aluno", () => {
+    const master = p({ email: "m@x", ja_aluno: "Sim", categoria_ticket: "Membro Master", d1: true });
+    const mentorado = p({ email: "n@x", ja_aluno: "Sim", curso: "Sou mentorado(a) do DTC Master" });
+    const convidado = p({ email: "o@x", ja_aluno: "Não", categoria_ticket: "Convidado(a) Master" });
+    const todos = [...lista, master, mentorado, convidado];
+    expect(filtrarAluno(todos, "master").map((i) => i.email)).toEqual(["m@x", "n@x"]);
+    expect(filtrarAluno(todos, "alunos").map((i) => i.email)).toEqual(["a@x"]);
+    expect(filtrarAluno(todos, "nao_alunos").map((i) => i.email)).toEqual(["b@x", "o@x"]);
+    expect(ehMembroMaster(convidado)).toBe(false);
+    const r = resumoPresenca(todos);
+    expect(r).toMatchObject({ presentes: 4, masters: 1, alunos: 1, naoAlunos: 1, semResposta: 1 });
   });
 });
 

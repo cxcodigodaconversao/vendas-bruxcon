@@ -77,18 +77,30 @@ export function rotulosPresenca(i: Inscrito): string[] {
 }
 
 export type FiltroPresenca = "todos" | "presentes";
-export type FiltroAluno = "todos" | "alunos" | "nao_alunos";
+export type FiltroAluno = "todos" | "master" | "alunos" | "nao_alunos";
 
 /**
- * Aluno só quando respondeu "Sim"; não aluno só quando respondeu "Não".
- * Quem não respondeu (null) não entra em nenhum dos dois: na lista fica
- * sem selo, e os filtros "Alunos" / "Não alunos" não o trazem.
+ * Membro Master (mentoria DTC Master) é uma categoria à parte: é aluno da
+ * casa também, mas o time trata separado, então NÃO entra em "Alunos".
+ * Vem da Classificação do ingresso ("Membro Master") ou do curso que a
+ * pessoa marcou no formulário ("Sou mentorado(a) do DTC Master").
+ * "Convidado(a) Master" é convidado de um membro, não membro.
+ */
+export function ehMembroMaster(i: Inscrito): boolean {
+  if (semAcento(i.categoriaTicket ?? "") === "membro master") return true;
+  return /mentorad[oa]\(?a?\)? do dtc master|membro master/.test(semAcento(String(i.extras.curso ?? "")));
+}
+
+/**
+ * Aluno só quando respondeu "Sim" e não é Membro Master; não aluno só
+ * quando respondeu "Não". Quem não respondeu (null) não entra em nenhum
+ * dos dois: na lista fica sem selo, e os filtros não o trazem.
  */
 export function ehAluno(i: Inscrito): boolean {
-  return i.jaAluno === true;
+  return i.jaAluno === true && !ehMembroMaster(i);
 }
 export function ehNaoAluno(i: Inscrito): boolean {
-  return i.jaAluno === false;
+  return i.jaAluno === false && !ehMembroMaster(i);
 }
 
 export function filtrarPresenca(lista: Inscrito[], filtro: FiltroPresenca): Inscrito[] {
@@ -96,6 +108,7 @@ export function filtrarPresenca(lista: Inscrito[], filtro: FiltroPresenca): Insc
 }
 
 export function filtrarAluno(lista: Inscrito[], filtro: FiltroAluno): Inscrito[] {
+  if (filtro === "master") return lista.filter(ehMembroMaster);
   if (filtro === "alunos") return lista.filter(ehAluno);
   if (filtro === "nao_alunos") return lista.filter(ehNaoAluno);
   return lista;
@@ -118,19 +131,21 @@ export function contarPorClasse(lista: Inscrito[]): Record<Classe, number> {
 
 export type ResumoPresenca = {
   presentes: number;
+  masters: number;
   alunos: number;
   naoAlunos: number;
   /** Presentes que não responderam se já são alunos. */
   semResposta: number;
-  porDia: { dia: number; n: number; alunos: number; naoAlunos: number; semResposta: number }[];
+  porDia: { dia: number; n: number; masters: number; alunos: number; naoAlunos: number; semResposta: number }[];
 };
 
-/** Presentes totais e por dia, abertos em aluno / não aluno / sem resposta. */
+/** Presentes totais e por dia, abertos em Membro Master / aluno / não aluno / sem resposta. */
 export function resumoPresenca(lista: Inscrito[]): ResumoPresenca {
   const abrir = (grupo: Inscrito[]) => {
+    const masters = grupo.filter(ehMembroMaster).length;
     const alunos = grupo.filter(ehAluno).length;
     const naoAlunos = grupo.filter(ehNaoAluno).length;
-    return { alunos, naoAlunos, semResposta: grupo.length - alunos - naoAlunos };
+    return { masters, alunos, naoAlunos, semResposta: grupo.length - masters - alunos - naoAlunos };
   };
   const presentes = lista.filter(estaPresente);
   const porDia = [1, 2, 3].map((dia) => {
@@ -360,6 +375,7 @@ export function fichaDoInscrito(i: Inscrito): SecaoFicha[] {
     ["CRO", cro],
     ["Curso", e.curso],
     ["Convidado por", e.convidado_por],
+    ["Vínculo", ehMembroMaster(i) ? "Membro Master" : ehAluno(i) ? "Aluno(a)" : ehNaoAluno(i) ? "Não aluno(a)" : null],
     ["Já é aluno(a)", i.jaAluno === null ? null : i.jaAluno ? "Sim" : "Não"],
     ["Disse no formulário que é aluno(a)", e.aluno_form],
     ["Produtos", i.produtos],
