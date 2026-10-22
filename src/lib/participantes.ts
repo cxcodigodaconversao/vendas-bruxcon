@@ -21,7 +21,7 @@ export function semAcento(s: string): string {
 }
 
 /**
- * Filtra por nome, e-mail, WhatsApp ou @instagram. Cada palavra do termo
+ * Filtra por nome, e-mail, WhatsApp, @instagram, CRO ou eTicket. Cada palavra do termo
  * precisa aparecer em algum campo (busca "E", não "OU"): "ana silva" não
  * traz todas as Anas nem todos os Silvas.
  */
@@ -30,7 +30,15 @@ export function filtrarParticipantes(lista: Inscrito[], termo: string): Inscrito
   if (!palavras.length) return lista;
   return lista.filter((i) => {
     const alvo = semAcento(
-      [i.nome, i.email, i.whatsapp ?? "", String(i.extras.instagram ?? ""), digitos(i.whatsapp)].join(" ")
+      [
+        i.nome,
+        i.email,
+        i.whatsapp ?? "",
+        String(i.extras.instagram ?? ""),
+        digitos(i.whatsapp),
+        String(i.extras.cro ?? ""),
+        String(i.extras.eticket ?? ""),
+      ].join(" ")
     );
     return palavras.every((p) => alvo.includes(p));
   });
@@ -248,12 +256,10 @@ export function ordenarParticipantes(lista: Inscrito[]): Inscrito[] {
 // ── Detalhe: os campos "soltos" que vieram do painel ────────────────────
 
 /**
- * Rótulos legíveis para o que mora em `extras`. A ordem aqui é a ordem da
- * tela. Campo que não estiver nesta lista simplesmente não é exibido —
- * assim o painel pode ganhar colunas novas sem poluir o app.
+ * Rótulos legíveis para o que mora em `extras` e não tem seção própria na
+ * ficha (ver `fichaDoInscrito`). São campos de painéis de outros eventos.
  */
 export const CAMPOS_EXTRAS: { chave: string; label: string }[] = [
-  { chave: "cro", label: "CRO" },
   { chave: "profissao", label: "Profissão" },
   { chave: "setor", label: "Setor" },
   { chave: "categoria", label: "Categoria" },
@@ -265,22 +271,205 @@ export const CAMPOS_EXTRAS: { chave: string; label: string }[] = [
   { chave: "comentario", label: "Comentário da equipe" },
   { chave: "primeiro_scan", label: "1º check-in" },
   { chave: "ultimo_scan", label: "Último check-in" },
-  { chave: "utm_source", label: "Origem (UTM)" },
   { chave: "utm_campaign", label: "Campanha (UTM)" },
 ];
 
 export type CampoDetalhe = { label: string; valor: string };
 
+/** Texto exibível de um valor solto, ou null se não há o que mostrar. */
+function comoTexto(v: unknown): string | null {
+  if (v === null || v === undefined || v === false) return null;
+  if (v === true) return "Sim";
+  const t = Array.isArray(v) ? v.filter((x) => x !== null && x !== "").join(", ") : String(v);
+  const limpo = t.trim();
+  // Travessões soltos ("—", "---") são como a origem marca "sem valor".
+  return limpo && !/^[-—–\s]+$/.test(limpo) ? limpo : null;
+}
+
 /** Os extras preenchidos, na ordem de CAMPOS_EXTRAS, já como texto. */
 export function detalhesDe(i: Inscrito): CampoDetalhe[] {
   const saida: CampoDetalhe[] = [];
   for (const { chave, label } of CAMPOS_EXTRAS) {
-    const v = i.extras[chave];
-    if (v === null || v === undefined || v === "" || v === false) continue;
-    const valor = Array.isArray(v) ? v.join(", ") : v === true ? "Sim" : String(v);
-    if (valor.trim()) saida.push({ label, valor: valor.trim() });
+    const valor = comoTexto(i.extras[chave]);
+    if (valor) saida.push({ label, valor });
   }
   return saida;
+}
+
+// ── Ficha completa: todas as respostas do painel, por assunto ───────────
+//
+// O painel de Lead Score (index.html) traz, por pessoa, o formulário de
+// inscrição, a origem do anúncio, a compra na Hotmart, o credenciamento e
+// a conta da nota. Tudo isso já é gravado em `extras` na importação; aqui
+// vira seções na mesma ordem do detalhe do painel, para o closer ler a
+// resposta da pessoa antes de abordar.
+
+export type SecaoFicha = { titulo: string; linhas: CampoDetalhe[] };
+
+const SESSOES: [string, string][] = [
+  ["d1m", "D1 manhã"], ["d1t", "D1 tarde"], ["d2m", "D2 manhã"],
+  ["d2t", "D2 tarde"], ["d3m", "D3 manhã"], ["d3t", "D3 tarde"],
+];
+
+/** Componentes da nota, com o rótulo do painel. */
+export const COMPONENTES_NOTA: [string, string][] = [
+  ["genero", "Gênero"], ["idade", "Idade 45+"], ["consultorio", "Consultório"],
+  ["especialidade", "Especialidade top 4"], ["faturamento", "Faturamento"],
+  ["presenca", "Presença"], ["vinculo", "Vínculo"],
+];
+
+/** Chaves de `extras` que a ficha já mostra (ou que são só conta interna). */
+const CHAVES_DA_FICHA = new Set([
+  "genero", "genero_inferido", "consultorio", "estado", "uf", "ddd", "curso", "convidado_por",
+  "interesse", "cro", "cro_valido", "aluno_form", "respondeu_form", "confirmou_form", "tags_origem",
+  "campanha", "utm_source", "criativo", "inscricao_em", "comprou_ingresso", "valor_compra",
+  "metodo_pag", "data_compra", "sessoes", "nps", "pre_checkin", "eticket", "pts", "pesos", "rank",
+  "fat_anual", "instagram", "cpf", "ingresso", "nps_d1", "nps_d2", "nps_d3", "qualificacao_cro",
+  "motivo", ...CAMPOS_EXTRAS.map((c) => c.chave),
+]);
+
+const linhas = (pares: [string, unknown][]): CampoDetalhe[] =>
+  pares.flatMap(([label, v]) => {
+    const valor = comoTexto(v);
+    return valor ? [{ label, valor }] : [];
+  });
+
+const rotulo = (chave: string) => {
+  const t = chave.replace(/_/g, " ").trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+
+export function fichaDoInscrito(i: Inscrito): SecaoFicha[] {
+  const e = i.extras;
+  const sim = (v: unknown) => String(v ?? "").trim().toLowerCase() === "sim";
+
+  const cro =
+    e.cro_valido === undefined
+      ? comoTexto(e.cro)
+      : [e.cro_valido ? "válido" : "não validado", comoTexto(e.cro) && `nº ${e.cro}`].filter(Boolean).join(" · ");
+  const genero = comoTexto(e.genero);
+
+  const perfil: [string, unknown][] = [
+    ["Gênero", genero && (e.genero_inferido ? `${genero} (pelo nome)` : genero)],
+    ["Especialidade", i.areaAtuacao],
+    ["Faturamento", i.faturamento],
+    ["Tempo de formado(a)", i.tempoFormado],
+    ["Estado", e.estado ?? e.uf],
+    ["Faixa etária", i.idade],
+    ["Consultório", e.consultorio],
+    ["CRO", cro],
+    ["Curso", e.curso],
+    ["Convidado por", e.convidado_por],
+    ["Já é aluno(a)", i.jaAluno === null ? null : i.jaAluno ? "Sim" : "Não"],
+    ["Disse no formulário que é aluno(a)", e.aluno_form],
+    ["Produtos", i.produtos],
+    ["Quer aprender", e.interesse],
+  ];
+
+  const pts = (e.pts ?? {}) as Record<string, number | null>;
+  const pesos = (e.pesos ?? {}) as Record<string, number>;
+  const nota: [string, unknown][] = [
+    ["Situação", i.tipo],
+    ["Posição na fila", typeof e.rank === "number" ? `${e.rank}º` : null],
+    ...COMPONENTES_NOTA.filter(([k]) => k in pts).map(([k, l]): [string, unknown] => [
+      l,
+      pts[k] === null ? "sem dado" : `${pts[k]}${pesos[k] !== undefined ? ` / ${pesos[k]}` : ""}`,
+    ]),
+    ["Observação", e.cro_valido === false ? "CRO não validado: nota × 0,8" : null],
+  ];
+
+  const sessoes = (e.sessoes ?? {}) as Record<string, unknown>;
+  const turnos = SESSOES.filter(([k]) => sim(sessoes[k])).map(([, l]) => l);
+  const nps = Array.isArray(e.nps)
+    ? e.nps.map((v, k) => (sim(v) ? `D${k + 1}` : null)).filter(Boolean)
+    : [1, 2, 3].filter((d) => sim(e[`nps_d${d}`])).map((d) => `D${d}`);
+  const presenca: [string, unknown][] = [
+    ["Ingresso", i.categoriaTicket],
+    ["Pré-checkin", e.pre_checkin],
+    ["Confirmou os 3 dias no formulário", e.confirmou_form],
+    ["Check-in", i.checkinFeito ? "Sim" : "Não"],
+    ["Dias", diasPresentes(i).map((d) => `Dia ${d}`).join(", ") || "Nenhum"],
+    ["Sessões", turnos.join(" · ")],
+    ["Respondeu NPS", nps.join(", ")],
+    ["Ligação", i.resultadoLigacao ?? (i.ligou ? "Ligou" : null)],
+    ["Confirmação", i.contatoConfirmou],
+    ["eTicket", e.eticket],
+  ];
+
+  const compra = e.comprou_ingresso
+    ? ["Sim", comoTexto(e.valor_compra) && `R$ ${e.valor_compra}`, comoTexto(e.metodo_pag), comoTexto(e.data_compra)]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+  const origem: [string, unknown][] = [
+    ["Inscrição", e.inscricao_em],
+    ["Origem", e.tags_origem],
+    ["Campanha", e.campanha],
+    ["Posicionamento", e.utm_source],
+    ["Criativo", e.criativo],
+    ["Comprou ingresso na Hotmart", compra],
+  ];
+
+  const outros: [string, unknown][] = [
+    ...detalhesDe(i).map((d): [string, unknown] => [d.label, d.valor]),
+    ...Object.entries(e)
+      .filter(([k, v]) => !CHAVES_DA_FICHA.has(k) && (typeof v !== "object" || Array.isArray(v)))
+      .map(([k, v]): [string, unknown] => [rotulo(k), v]),
+  ];
+
+  return [
+    { titulo: "Perfil e respostas", linhas: linhas(perfil) },
+    { titulo: "Composição da nota", linhas: linhas(nota) },
+    { titulo: "Ingresso e presença", linhas: linhas(presenca) },
+    { titulo: "Origem e histórico", linhas: linhas(origem) },
+    { titulo: "Outras respostas", linhas: linhas(outros) },
+  ].filter((s) => s.linhas.length > 0);
+}
+
+// ── Filtro por resposta ─────────────────────────────────────────────────
+
+export type CampoResposta = { chave: string; label: string; ler: (i: Inscrito) => unknown };
+
+/** Respostas que dá para usar como filtro na lista (valores repetem entre pessoas). */
+export const CAMPOS_RESPOSTA: CampoResposta[] = [
+  { chave: "especialidade", label: "Especialidade", ler: (i) => i.areaAtuacao },
+  { chave: "faturamento", label: "Faturamento", ler: (i) => i.faturamento },
+  { chave: "ingresso", label: "Ingresso", ler: (i) => i.categoriaTicket },
+  { chave: "pre_checkin", label: "Pré-checkin", ler: (i) => i.extras.pre_checkin },
+  { chave: "confirmou_form", label: "Confirmou os 3 dias", ler: (i) => (i.extras.confirmou_form === undefined ? null : i.extras.confirmou_form ? "Sim" : "Não") },
+  { chave: "situacao", label: "Situação da nota", ler: (i) => i.tipo },
+  { chave: "curso", label: "Curso", ler: (i) => i.extras.curso },
+  { chave: "estado", label: "Estado", ler: (i) => i.extras.estado ?? i.extras.uf },
+  { chave: "genero", label: "Gênero", ler: (i) => i.extras.genero },
+  { chave: "origem", label: "Origem", ler: (i) => i.extras.tags_origem },
+  { chave: "posicionamento", label: "Posicionamento", ler: (i) => i.extras.utm_source },
+  { chave: "campanha", label: "Campanha", ler: (i) => i.extras.campanha },
+  { chave: "criativo", label: "Criativo", ler: (i) => i.extras.criativo },
+];
+
+/** Valores existentes de um campo, com quantas pessoas cada um tem (mais comum primeiro). */
+export function valoresDoCampo(lista: Inscrito[], chave: string): { valor: string; n: number }[] {
+  const campo = CAMPOS_RESPOSTA.find((c) => c.chave === chave);
+  if (!campo) return [];
+  const m = new Map<string, number>();
+  for (const i of lista) {
+    const v = comoTexto(campo.ler(i));
+    if (v) m.set(v, (m.get(v) ?? 0) + 1);
+  }
+  return [...m.entries()]
+    .map(([valor, n]) => ({ valor, n }))
+    .sort((a, b) => b.n - a.n || a.valor.localeCompare(b.valor, "pt-BR"));
+}
+
+/** Campos com pelo menos um valor na base — o resto nem aparece no seletor. */
+export function camposDisponiveis(lista: Inscrito[]): CampoResposta[] {
+  return CAMPOS_RESPOSTA.filter((c) => lista.some((i) => comoTexto(c.ler(i))));
+}
+
+export function filtrarResposta(lista: Inscrito[], chave: string, valor: string): Inscrito[] {
+  const campo = CAMPOS_RESPOSTA.find((c) => c.chave === chave);
+  if (!campo || !valor) return lista;
+  return lista.filter((i) => comoTexto(campo.ler(i)) === valor);
 }
 
 // ── Abordagens ──────────────────────────────────────────────────────────

@@ -8,7 +8,11 @@ import {
   resumoDias,
   contarPorClasse,
   filtrarClasse,
+  camposDisponiveis,
   detalhesDe,
+  fichaDoInscrito,
+  filtrarResposta,
+  valoresDoCampo,
   ehAluno,
   estaPresente,
   filtrarAluno,
@@ -171,9 +175,9 @@ describe("ordenarParticipantes", () => {
 
 describe("detalhesDe", () => {
   it("mostra só os extras preenchidos, na ordem definida", () => {
-    const d = detalhesDe(p({ cro: "MG 23926", acompanhante: "Sim, vou levar", comentario: "" }));
-    expect(d.map((x) => x.label)).toEqual(["CRO", "Vai levar acompanhante"]);
-    expect(d[0].valor).toBe("MG 23926");
+    const d = detalhesDe(p({ setor: "Clínica", acompanhante: "Sim, vou levar", comentario: "" }));
+    expect(d.map((x) => x.label)).toEqual(["Setor", "Vai levar acompanhante"]);
+    expect(d[0].valor).toBe("Clínica");
   });
 
   it("junta lista em texto e traduz booleano", () => {
@@ -286,5 +290,122 @@ describe("abordagensPorMembro", () => {
     expect(r[0].leads[0].registros.map((a) => a.id)).toEqual(["3", "1"]);
     expect(r[0].leads[1].classe).toBe("B");
     expect(r[1].leads[0]).toMatchObject({ nome: "fora@x", classe: null });
+  });
+});
+
+/** Linha no formato do painel de Lead Score do IMBX (index.html). */
+const imbx = (over: Record<string, unknown> = {}) =>
+  p({
+    classe: "AA",
+    nota: 98.8,
+    tipo: "completo",
+    genero: "Feminino",
+    genero_inferido: true,
+    area_atuacao: "Prótese",
+    faturamento: "De 201 mil a 300 mil reais no ano",
+    estado: "Alagoas",
+    curso: "Sou aluno(a) do Bruxismo do Zero ao avançado",
+    convidado_por: "---",
+    interesse: "Placas de Michigan",
+    confirmou_form: true,
+    aluno_form: true,
+    tags_origem: "Google Forms, CRM Clint",
+    campanha: "[IMBX_BH_Outubro]_[FB]",
+    utm_source: "Instagram_Stories",
+    criativo: "FEED_1.png",
+    cro: "43024",
+    cro_valido: true,
+    inscricao_em: "14/07/2026",
+    comprou_ingresso: true,
+    valor_compra: "297.00",
+    metodo_pag: "Pix",
+    data_compra: "02/08/2026 12:50:29",
+    sessoes: { d1m: "Sim", d1t: "Não", d2m: "Não", d2t: "Sim", d3m: "Não", d3t: "Não" },
+    nps: ["Sim", "Não", "Não"],
+    ja_aluno: "Sim",
+    categoria_ticket: "Aluno(a)",
+    pre_checkin: "Confirmado",
+    checkin_feito: true,
+    d1: true,
+    eticket: "4822311006457619574",
+    pts: { genero: 10, idade: null, especialidade: 15 },
+    pesos: { genero: 10, idade: 15, especialidade: 15 },
+    rank: 1,
+    campo_novo: "valor novo",
+    ...over,
+  });
+
+describe("fichaDoInscrito", () => {
+  const secao = (titulo: string, over?: Record<string, unknown>) =>
+    Object.fromEntries(
+      (fichaDoInscrito(imbx(over)).find((s) => s.titulo === titulo)?.linhas ?? []).map((l) => [l.label, l.valor])
+    );
+
+  it("mostra as respostas do formulário do painel", () => {
+    const perfil = secao("Perfil e respostas");
+    expect(perfil).toMatchObject({
+      Gênero: "Feminino (pelo nome)",
+      Especialidade: "Prótese",
+      Estado: "Alagoas",
+      CRO: "válido · nº 43024",
+      Curso: "Sou aluno(a) do Bruxismo do Zero ao avançado",
+      "Quer aprender": "Placas de Michigan",
+      "Já é aluno(a)": "Sim",
+    });
+    expect(perfil).not.toHaveProperty("Convidado por"); // "---" é vazio
+  });
+
+  it("abre a nota por componente com o peso", () => {
+    expect(secao("Composição da nota")).toMatchObject({
+      Situação: "completo",
+      "Posição na fila": "1º",
+      Gênero: "10 / 10",
+      "Idade 45+": "sem dado",
+      "Especialidade top 4": "15 / 15",
+    });
+    expect(secao("Composição da nota", { cro_valido: false }).Observação).toMatch(/× 0,8/);
+  });
+
+  it("traz presença, sessões, NPS, origem e compra na Hotmart", () => {
+    expect(secao("Ingresso e presença")).toMatchObject({
+      Ingresso: "Aluno(a)",
+      "Pré-checkin": "Confirmado",
+      "Confirmou os 3 dias no formulário": "Sim",
+      Sessões: "D1 manhã · D2 tarde",
+      "Respondeu NPS": "D1",
+      eTicket: "4822311006457619574",
+    });
+    expect(secao("Origem e histórico")).toMatchObject({
+      Inscrição: "14/07/2026",
+      Posicionamento: "Instagram_Stories",
+      "Comprou ingresso na Hotmart": "Sim · R$ 297.00 · Pix · 02/08/2026 12:50:29",
+    });
+  });
+
+  it("campo novo do painel não se perde: vai para Outras respostas", () => {
+    expect(secao("Outras respostas")).toEqual({ "Campo novo": "valor novo" });
+  });
+});
+
+describe("filtro por resposta", () => {
+  const base = [imbx(), imbx({ email: "b@x.com", area_atuacao: "Ortodontia" }), imbx({ email: "c@x.com" })];
+
+  it("lista valores com contagem e filtra", () => {
+    expect(valoresDoCampo(base, "especialidade")).toEqual([
+      { valor: "Prótese", n: 2 },
+      { valor: "Ortodontia", n: 1 },
+    ]);
+    expect(filtrarResposta(base, "especialidade", "Ortodontia").map((i) => i.email)).toEqual(["b@x.com"]);
+    expect(filtrarResposta(base, "especialidade", "")).toHaveLength(3);
+  });
+
+  it("só oferece campos que existem na base", () => {
+    const chaves = camposDisponiveis([p()]).map((c) => c.chave);
+    expect(chaves).not.toContain("confirmou_form");
+    expect(camposDisponiveis(base).map((c) => c.chave)).toContain("confirmou_form");
+  });
+
+  it("busca acha por CRO e eTicket", () => {
+    expect(filtrarParticipantes(base, "4822311006457619574")).toHaveLength(3);
   });
 });

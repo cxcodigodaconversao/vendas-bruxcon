@@ -136,10 +136,15 @@ export function extrairInscritosDoPainel(conteudo: string): { inscritos: Inscrit
   const rows: unknown = Array.isArray(dados) ? dados : (dados as { rows?: unknown })?.rows;
   if (!Array.isArray(rows)) throw new Error("O arquivo não tem a lista de inscritos (rows).");
 
+  // Os pesos da nota ficam no agregado do painel; cada inscrito leva uma
+  // cópia para a ficha mostrar "15 / 15" sem precisar do painel inteiro.
+  const pesos = (dados as { agg?: { pesos?: unknown } })?.agg?.pesos;
+
   const porEmail = new Map<string, Inscrito>();
   let descartados = 0;
   for (const r of rows) {
     const i = r && typeof r === "object" ? normalizarLinha(r as Record<string, unknown>) : null;
+    if (i && pesos && typeof pesos === "object") i.extras.pesos = pesos;
     if (i) porEmail.set(i.email, i);
     else descartados++;
   }

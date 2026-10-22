@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { ScanLine } from "lucide-react";
 import { supabase } from "@/lib/supabase/cliente";
-import { SELECT_LEAD, vendaParaLinha } from "@/lib/consultas";
+import { SELECT_INSCRITO, SELECT_LEAD, vendaParaLinha } from "@/lib/consultas";
+import { normalizarEmail, type Inscrito } from "@/lib/analise";
+import { fichaDoInscrito } from "@/lib/participantes";
 import { fmtPts } from "@/lib/config";
 import { calcularPontos, type ContextoVenda } from "@/lib/pontuacao";
 import type { Evento, Lead, Usuario } from "@/lib/types";
@@ -35,6 +37,8 @@ export function Registrar({ perfil, evento }: { perfil: Usuario; evento: Evento 
   const [busy, setBusy] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanMsg, setScanMsg] = useState("");
+  // Respostas do lead lido no crachá (painel de Lead Score), por e-mail.
+  const [inscrito, setInscrito] = useState<Inscrito | null>(null);
 
   // Ao trocar de evento, o produto escolhido é de OUTRO catálogo — sem isto a
   // venda entraria com um produtoId que não existe no evento selecionado.
@@ -42,6 +46,7 @@ export function Registrar({ perfil, evento }: { perfil: Usuario; evento: Evento 
     setProdutoId(evento.produtos[0]?.id ?? "");
     setFaixa(null);
     setLeadId(null);
+    setInscrito(null);
   }, [evento.id, evento.produtos]);
 
   const contexto: ContextoVenda = useMemo(
@@ -89,13 +94,24 @@ export function Registrar({ perfil, evento }: { perfil: Usuario; evento: Evento 
     setCep(lead.cep || "");
     setLeadId(lead.id);
     setScanMsg(`✓ ${lead.nome}${lead.especialidade ? " · " + lead.especialidade : ""}`);
+
+    const emailLead = normalizarEmail(lead.email);
+    if (emailLead) {
+      const { data: ins } = await supabase
+        .from("inscritos")
+        .select(SELECT_INSCRITO)
+        .eq("evento_id", evento.id)
+        .eq("email", emailLead)
+        .maybeSingle();
+      setInscrito((ins as unknown as Inscrito) ?? null);
+    }
   }
 
   function limpar() {
     setCliente(""); setEmail(""); setTelefone(""); setCpf(""); setCep(""); setLeadId(null);
     setDataVenda(""); setValor(""); setCadeira(null); setFaixa(null);
     setRecebido(""); setCompleto(null); setRestante(""); setNegociacao("");
-    setObservacao(""); setScanMsg("");
+    setObservacao(""); setScanMsg(""); setInscrito(null);
   }
 
   async function registrar() {
@@ -176,10 +192,11 @@ export function Registrar({ perfil, evento }: { perfil: Usuario; evento: Evento 
     <>
       <Card className="mb-3">
         <CardContent className="pt-4">
-          <Button variant="outline" full size="lg" onClick={() => { setScanMsg(""); setScanOpen(true); }}>
+          <Button variant="outline" full size="lg" onClick={() => { setScanMsg(""); setInscrito(null); setScanOpen(true); }}>
             <ScanLine className="h-5 w-5" /> Ler crachá do lead
           </Button>
           {scanMsg && <p className="mt-2.5 text-center text-xs text-muted-foreground">{scanMsg}</p>}
+          {inscrito && <RespostasDoLead inscrito={inscrito} />}
 
           <div className="my-4 h-px bg-border" />
 
@@ -303,5 +320,28 @@ export function Registrar({ perfil, evento }: { perfil: Usuario; evento: Evento 
 
       {scanOpen && <QrScanner onRead={onQrRead} onClose={() => setScanOpen(false)} />}
     </>
+  );
+}
+
+/** Resumo do Lead Score e, ao tocar, todas as respostas do lead lido. */
+function RespostasDoLead({ inscrito: i }: { inscrito: Inscrito }) {
+  return (
+    <details className="mt-2.5 rounded-lg border border-border bg-background p-3 text-sm">
+      <summary className="cursor-pointer font-medium">
+        Lead Score <span className="num">{i.classe}</span>
+        {i.nota !== null && <span className="num"> · {i.nota}</span>}
+        <span className="text-xs font-normal text-muted-foreground"> · ver respostas</span>
+      </summary>
+      {fichaDoInscrito(i).map((secao) => (
+        <div key={secao.titulo} className="mt-3">
+          <p className="eyebrow">{secao.titulo}</p>
+          {secao.linhas.map((d, k) => (
+            <p key={`${d.label}-${k}`} className="mt-1 text-xs leading-relaxed [overflow-wrap:anywhere]">
+              <span className="text-muted-foreground">{d.label}:</span> {d.valor}
+            </p>
+          ))}
+        </div>
+      ))}
+    </details>
   );
 }

@@ -11,7 +11,8 @@ import {
   COMBINACOES,
   contarPorClasse,
   contarPorDia,
-  detalhesDe,
+  camposDisponiveis,
+  fichaDoInscrito,
   ehAluno,
   ehNaoAluno,
   filtrarAluno,
@@ -19,11 +20,13 @@ import {
   filtrarDia,
   filtrarParticipantes,
   filtrarPresenca,
+  filtrarResposta,
   linkInstagram,
   linkWhatsapp,
   ordenarParticipantes,
   resumoPresenca,
   rotulosPresenca,
+  valoresDoCampo,
   type FiltroAluno,
   type FiltroDia,
   type FiltroPresenca,
@@ -32,7 +35,7 @@ import type { Abordagem, Evento, Usuario, Venda } from "@/lib/types";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, Empty, SectionLabel } from "./ui/card";
-import { Field, Input, Textarea } from "./ui/field";
+import { Field, Input, Select, Textarea } from "./ui/field";
 import { useFeedback } from "./ui/feedback";
 
 /**
@@ -54,6 +57,8 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
   const [aluno, setAluno] = useState<FiltroAluno>("todos");
   const [dia, setDia] = useState<FiltroDia>("todos");
   const [classes, setClasses] = useState<Set<Classe>>(new Set());
+  const [campoResp, setCampoResp] = useState("");
+  const [valorResp, setValorResp] = useState("");
   const [aberto, setAberto] = useState<Inscrito | null>(null);
   const [abordagens, setAbordagens] = useState<Abordagem[]>([]);
 
@@ -65,6 +70,8 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     setAluno("todos");
     setDia("todos");
     setClasses(new Set());
+    setCampoResp("");
+    setValorResp("");
     (async () => {
       const { data, error } = await supabase
         .from("inscritos")
@@ -114,17 +121,20 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     return true;
   }
 
+  /** Busca + filtro por resposta: a base que os outros filtros recortam. */
+  const buscar = (l: Inscrito[]) => filtrarResposta(filtrarParticipantes(l, termo), campoResp, valorResp);
+
   const lista = useMemo(
     () =>
       inscritos
         ? ordenarParticipantes(
             filtrarClasse(
-              filtrarDia(filtrarAluno(filtrarPresenca(filtrarParticipantes(inscritos, termo), presenca), aluno), dia),
+              filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia),
               classes
             )
           )
         : [],
-    [inscritos, termo, presenca, aluno, dia, classes]
+    [inscritos, termo, campoResp, valorResp, presenca, aluno, dia, classes]
   );
 
   /** Contagem por classe respeitando os OUTROS filtros (busca, presença,
@@ -133,19 +143,19 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     () =>
       contarPorClasse(
         inscritos
-          ? filtrarDia(filtrarAluno(filtrarPresenca(filtrarParticipantes(inscritos, termo), presenca), aluno), dia)
+          ? filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia)
           : []
       ),
-    [inscritos, termo, presenca, aluno, dia]
+    [inscritos, termo, campoResp, valorResp, presenca, aluno, dia]
   );
 
   /** Mesma ideia para os chips de dia: respeitam busca, aluno e classe. */
   const porDia = useMemo(
     () =>
       contarPorDia(
-        inscritos ? filtrarClasse(filtrarAluno(filtrarParticipantes(inscritos, termo), aluno), classes) : []
+        inscritos ? filtrarClasse(filtrarAluno(buscar(inscritos), aluno), classes) : []
       ),
-    [inscritos, termo, aluno, classes]
+    [inscritos, termo, campoResp, valorResp, aluno, classes]
   );
   /** Base das porcentagens dos chips: presentes com dia marcado. */
   const comDia = COMBINACOES.reduce((s, c) => s + porDia[c.chave], 0);
@@ -161,7 +171,12 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
 
   /** Contadores dos chips: presentes vêm do painel importado, não do app. */
   const resumo = useMemo(() => (inscritos ? resumoPresenca(inscritos) : null), [inscritos]);
-  const filtrando = Boolean(termo) || presenca !== "todos" || aluno !== "todos" || dia !== "todos" || classes.size > 0;
+  const campos = useMemo(() => (inscritos ? camposDisponiveis(inscritos) : []), [inscritos]);
+  const valores = useMemo(
+    () => (inscritos && campoResp ? valoresDoCampo(inscritos, campoResp) : []),
+    [inscritos, campoResp]
+  );
+  const filtrando = Boolean(termo) || Boolean(valorResp) || presenca !== "todos" || aluno !== "todos" || dia !== "todos" || classes.size > 0;
 
   if (inscritos === null) return <Empty>Carregando…</Empty>;
   if (!inscritos.length) {
@@ -189,11 +204,48 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
             <Input
               value={termo}
               onChange={(e) => setTermo(e.target.value)}
-              placeholder="Nome, e-mail, telefone ou @instagram"
+              placeholder="Nome, e-mail, telefone, CRO ou eTicket"
               className="pl-9"
               autoComplete="off"
             />
           </div>
+          {/* Filtro por resposta do formulário/origem: escolhe o campo, depois
+              o valor. Só aparecem campos que a base importada tem. */}
+          {campos.length > 0 && (
+            <div className="mt-3 flex gap-2">
+              <Select
+                value={campoResp}
+                onChange={(e) => {
+                  setCampoResp(e.target.value);
+                  setValorResp("");
+                }}
+                className="flex-1"
+                aria-label="Filtrar por resposta"
+              >
+                <option value="">Filtrar por resposta…</option>
+                {campos.map((c) => (
+                  <option key={c.chave} value={c.chave}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
+              {campoResp && (
+                <Select
+                  value={valorResp}
+                  onChange={(e) => setValorResp(e.target.value)}
+                  className="flex-1"
+                  aria-label="Valor da resposta"
+                >
+                  <option value="">Todos</option>
+                  {valores.map((v) => (
+                    <option key={v.valor} value={v.valor}>
+                      {v.valor} ({v.n})
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </div>
+          )}
           {/* Filtros rápidos: o time quer olhar "só quem está no salão" sem
               abrir ficha por ficha. Presença e aluno combinam entre si. */}
           <div className="mt-3 flex flex-wrap gap-2">
@@ -369,7 +421,7 @@ function Ficha({
 }) {
   const wa = linkWhatsapp(i.whatsapp);
   const ig = linkInstagram(i.extras.instagram);
-  const detalhes = detalhesDe(i);
+  const secoes = fichaDoInscrito(i);
   const [texto, setTexto] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -474,42 +526,17 @@ function Ficha({
         </CardContent>
       </Card>
 
-      <Card className="mb-3">
-        <CardContent className="pt-4">
-          <SectionLabel>Perfil</SectionLabel>
-          <Linha label="Faturamento" valor={i.faturamento} />
-          <Linha label="Tempo de formado(a)" valor={i.tempoFormado} />
-          <Linha label="Atuação / estrutura" valor={i.areaAtuacao} />
-          <Linha label="Faixa etária" valor={i.idade} />
-          <Linha label="Já é aluno(a)" valor={i.jaAluno === null ? null : i.jaAluno ? "Sim" : "Não"} />
-          <Linha label="Ingresso" valor={i.categoriaTicket} />
-          <Linha label="Produtos" valor={i.produtos} />
-        </CardContent>
-      </Card>
-
-      <Card className="mb-3">
-        <CardContent className="pt-4">
-          <SectionLabel>Presença e contato</SectionLabel>
-          <Linha label="Check-in" valor={i.checkinFeito ? "Sim" : "Não"} />
-          <Linha
-            label="Dias"
-            valor={[i.d1 && "Dia 1", i.d2 && "Dia 2", i.d3 && "Dia 3"].filter(Boolean).join(", ") || "Nenhum"}
-          />
-          <Linha label="Ligação" valor={i.resultadoLigacao ?? (i.ligou ? "Ligou" : null)} />
-          <Linha label="Confirmação" valor={i.contatoConfirmou} />
-        </CardContent>
-      </Card>
-
-      {detalhes.length > 0 && (
-        <Card className="mb-3">
+      {/* Todas as respostas que vieram do painel, por assunto. */}
+      {secoes.map((secao) => (
+        <Card key={secao.titulo} className="mb-3">
           <CardContent className="pt-4">
-            <SectionLabel>Respostas e origem</SectionLabel>
-            {detalhes.map((d) => (
-              <Linha key={d.label} label={d.label} valor={d.valor} />
+            <SectionLabel>{secao.titulo}</SectionLabel>
+            {secao.linhas.map((d, k) => (
+              <Linha key={`${d.label}-${k}`} label={d.label} valor={d.valor} />
             ))}
           </CardContent>
         </Card>
-      )}
+      ))}
     </>
   );
 }
@@ -659,7 +686,7 @@ function Linha({ label, valor }: { label: string; valor: string | null }) {
   return (
     <div className="flex gap-3 border-b border-border py-1.5 last:border-0">
       <span className="w-[42%] shrink-0 text-xs text-muted">{label}</span>
-      <span className="flex-1 text-sm">{valor}</span>
+      <span className="min-w-0 flex-1 text-sm [overflow-wrap:anywhere]">{valor}</span>
     </div>
   );
 }
