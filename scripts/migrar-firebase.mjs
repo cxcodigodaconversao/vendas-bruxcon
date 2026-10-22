@@ -35,8 +35,10 @@ const arg = (nome) => {
 };
 const APLICAR = process.argv.includes("--apply");
 const SLUG = arg("evento");
-const EMAIL = arg("email");
-const SENHA = arg("senha");
+// Também aceita FIREBASE_EMAIL / FIREBASE_SENHA do ambiente, para a senha
+// não ficar no histórico do terminal.
+const EMAIL = arg("email") ?? process.env.FIREBASE_EMAIL;
+const SENHA = arg("senha") ?? process.env.FIREBASE_SENHA;
 
 if (!SLUG || !EMAIL || !SENHA) {
   console.error("Uso: node scripts/migrar-firebase.mjs --evento <slug> --email <admin-v1> --senha <senha-v1> [--apply]");
