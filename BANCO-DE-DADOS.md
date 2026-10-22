@@ -52,6 +52,27 @@ node scripts/criar-usuarios.mjs --apply    # anote as senhas impressas
 6. Participantes e Análise: importe a planilha .xlsx na tela de importação e
    suba o `index.html` do painel de conversão na aba Análise.
 
+## Sem terminal: pelo SQL Editor do Supabase
+
+As migrações do banco de produção do Bruxcon foram aplicadas **à mão**, pelo
+SQL Editor, com os arquivos de `supabase/manual/` (mesmo conteúdo das
+migrações, só agrupado). Rode um por vez, na ordem, cada um num Run:
+
+1. `parte1-migracoes-0001-0004.sql`
+2. `parte2-migracoes-0005-0010.sql` — no fim registra 0001–0010 em
+   `supabase_migrations.schema_migrations`, para a integração GitHub do
+   Supabase não aplicá-las de novo quando o PR entrar na `main`. O
+   resultado mostra o projeto DTC Master com as faixas e regras.
+3. `parte3-cadastrar-equipe.sql` — faz o mesmo que `criar-usuarios.mjs` e
+   mostra as senhas temporárias. Anote na hora.
+
+A 0004 (`alter type ... add value`) fica no fim da parte 1 porque o valor
+novo não pode ser usado no mesmo Run em que é criado.
+
+Migração nova daqui em diante: crie o arquivo em `supabase/migrations/` e
+aplique por um caminho só (integração no merge **ou** à mão + registro na
+`schema_migrations`), nunca pelos dois.
+
 ## Publicar no Netlify
 
 O `netlify.toml` já está pronto (`npm run build` + plugin do Next.js).
