@@ -92,3 +92,14 @@ describe("lerCsv", () => {
     expect(lerCsv('Nome,Email\n"Zé ""Bola""",ze@x.com')).toEqual([{ Nome: 'Zé "Bola"', Email: "ze@x.com" }]);
   });
 });
+
+describe("turnos da planilha", () => {
+  it("Check-in D2 Manhã/Tarde vira extras.sessoes como no painel", () => {
+    const { inscritos } = inscritosDaPlanilha([
+      linha({ "Check-in D2": "Sim", "Check-in D2 Manhã": "Não", "Check-in D2 Tarde": "Sim" }),
+    ]);
+    expect(inscritos[0].d2).toBe(true);
+    expect(inscritos[0].extras.sessoes).toEqual({ d2m: "Não", d2t: "Sim" });
+    expect(inscritos[0].extras).not.toHaveProperty("check_in_d2_manha");
+  });
+});

@@ -7,6 +7,7 @@ import { SELECT_ABORDAGEM, SELECT_INSCRITO } from "@/lib/consultas";
 import { fmtVal } from "@/lib/config";
 import { calcularAnalise, type Analise as Numeros, type Classe, type Contagem, type Inscrito } from "@/lib/analise";
 import { abordagensPorMembro, resumoDias } from "@/lib/participantes";
+import { GRUPOS, resumoPeriodos, temTurnos } from "@/lib/periodos";
 import type { Abordagem, Evento, Usuario, Venda } from "@/lib/types";
 import { Button } from "./ui/button";
 import { Card, CardContent, Empty, SectionLabel } from "./ui/card";
@@ -87,6 +88,10 @@ export function Analise({ evento, vendas, perfil }: { evento: Evento; vendas: Ve
 
   const a = useMemo(() => (inscritos ? calcularAnalise(inscritos, vendas) : null), [inscritos, vendas]);
   const dias = useMemo(() => (inscritos ? resumoDias(inscritos) : null), [inscritos]);
+  const periodos = useMemo(
+    () => (inscritos && temTurnos(inscritos) ? resumoPeriodos(inscritos) : null),
+    [inscritos]
+  );
 
   return (
     <>
@@ -204,6 +209,9 @@ export function Analise({ evento, vendas, perfil }: { evento: Evento; vendas: Ve
             </CardContent>
           </Card>
 
+          {/* ── Presença por período (manhã / tarde) ────────────────── */}
+          {periodos && <CardPeriodos {...periodos} />}
+
           {/* ── Perfil declarado ─────────────────────────────────────── */}
           <Bloco titulo="Faturamento mensal declarado" itens={a.faturamento} />
           <Bloco titulo="Tempo de formado(a)" itens={a.tempoFormado} />
@@ -283,6 +291,42 @@ function BarraClasse({ classe, n, max, vendas, conversao }: { classe: Classe; n:
         {vendas > 0 ? `${vendas} v · ${conversao}%` : "—"}
       </span>
     </div>
+  );
+}
+
+/**
+ * Presença por período, como no painel: cada número com a frase do que ele
+ * conta. % sobre as pessoas únicas que vieram em algum dia.
+ */
+function CardPeriodos({ presentes, linhas }: ReturnType<typeof resumoPeriodos>) {
+  return (
+    <Card className="mb-3">
+      <CardContent className="pt-4">
+        <SectionLabel>Presença por período · manhã e tarde</SectionLabel>
+        <p className="mt-1 text-xs text-muted">
+          % sobre as {presentes} pessoas únicas que vieram em algum dia. O D1 conta como dia inteiro.
+        </p>
+        {GRUPOS.map(({ grupo, titulo }) => {
+          const doGrupo = linhas.filter((l) => l.grupo === grupo);
+          if (!doGrupo.length) return null;
+          return (
+            <div key={grupo} className="mt-3 border-t border-border pt-2">
+              <p className="eyebrow">{titulo}</p>
+              {doGrupo.map((l) => (
+                <div key={l.chave} className="border-b border-border py-1.5 last:border-0">
+                  <div className="flex items-baseline gap-2 text-sm">
+                    <span className="flex-1 font-medium">{l.label}</span>
+                    <span className="num font-semibold text-accent">{l.n}</span>
+                    <span className="num w-12 text-right text-xs text-muted">{l.pct}%</span>
+                  </div>
+                  <p className="text-xs leading-snug text-muted">{l.descricao}</p>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
 

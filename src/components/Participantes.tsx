@@ -32,6 +32,7 @@ import {
   type FiltroDia,
   type FiltroPresenca,
 } from "@/lib/participantes";
+import { filtrarRecorte, resumoPeriodos, temTurnos } from "@/lib/periodos";
 import type { Abordagem, Evento, Usuario, Venda } from "@/lib/types";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -60,6 +61,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
   const [classes, setClasses] = useState<Set<Classe>>(new Set());
   const [campoResp, setCampoResp] = useState("");
   const [valorResp, setValorResp] = useState("");
+  const [recorte, setRecorte] = useState("");
   const [aberto, setAberto] = useState<Inscrito | null>(null);
   const [abordagens, setAbordagens] = useState<Abordagem[]>([]);
 
@@ -73,6 +75,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     setClasses(new Set());
     setCampoResp("");
     setValorResp("");
+    setRecorte("");
     (async () => {
       const { data, error } = await supabase
         .from("inscritos")
@@ -123,7 +126,8 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
   }
 
   /** Busca + filtro por resposta: a base que os outros filtros recortam. */
-  const buscar = (l: Inscrito[]) => filtrarResposta(filtrarParticipantes(l, termo), campoResp, valorResp);
+  const buscar = (l: Inscrito[]) =>
+    filtrarRecorte(filtrarResposta(filtrarParticipantes(l, termo), campoResp, valorResp), recorte);
 
   const lista = useMemo(
     () =>
@@ -135,7 +139,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
             )
           )
         : [],
-    [inscritos, termo, campoResp, valorResp, presenca, aluno, dia, classes]
+    [inscritos, termo, campoResp, valorResp, recorte, presenca, aluno, dia, classes]
   );
 
   /** Contagem por classe respeitando os OUTROS filtros (busca, presença,
@@ -147,7 +151,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
           ? filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia)
           : []
       ),
-    [inscritos, termo, campoResp, valorResp, presenca, aluno, dia]
+    [inscritos, termo, campoResp, valorResp, recorte, presenca, aluno, dia]
   );
 
   /** Mesma ideia para os chips de dia: respeitam busca, aluno e classe. */
@@ -156,7 +160,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
       contarPorDia(
         inscritos ? filtrarClasse(filtrarAluno(buscar(inscritos), aluno), classes) : []
       ),
-    [inscritos, termo, campoResp, valorResp, aluno, classes]
+    [inscritos, termo, campoResp, valorResp, recorte, aluno, classes]
   );
   /** Base das porcentagens dos chips: presentes com dia marcado. */
   const comDia = COMBINACOES.reduce((s, c) => s + porDia[c.chave], 0);
@@ -178,7 +182,12 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     () => (inscritos && campoResp ? valoresDoCampo(inscritos, campoResp) : []),
     [inscritos, campoResp]
   );
-  const filtrando = Boolean(termo) || Boolean(valorResp) || presenca !== "todos" || aluno !== "todos" || dia !== "todos" || classes.size > 0;
+  /** Recortes por período (manhã/tarde) com contagem — só se a base tem turnos. */
+  const periodos = useMemo(
+    () => (inscritos && temTurnos(inscritos) ? resumoPeriodos(inscritos).linhas : []),
+    [inscritos]
+  );
+  const filtrando = Boolean(termo) || Boolean(valorResp) || Boolean(recorte) || presenca !== "todos" || aluno !== "todos" || dia !== "todos" || classes.size > 0;
 
   if (inscritos === null) return <Empty>Carregando…</Empty>;
   if (!inscritos.length) {
@@ -245,6 +254,23 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
                     </option>
                   ))}
                 </Select>
+              )}
+            </div>
+          )}
+          {/* Período: D1, D2 manhã/tarde, combinações e novos — os mesmos
+              recortes do painel, com a frase do que cada um conta. */}
+          {periodos.length > 0 && (
+            <div className="mt-3">
+              <Select value={recorte} onChange={(e) => setRecorte(e.target.value)} aria-label="Filtrar por período">
+                <option value="">Todos os períodos</option>
+                {periodos.map((l) => (
+                  <option key={l.chave} value={l.chave}>
+                    {l.label} ({l.n})
+                  </option>
+                ))}
+              </Select>
+              {recorte && (
+                <p className="mt-1 text-xs text-muted">{periodos.find((l) => l.chave === recorte)?.descricao}</p>
               )}
             </div>
           )}

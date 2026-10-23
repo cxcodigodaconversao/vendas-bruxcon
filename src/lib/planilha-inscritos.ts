@@ -64,6 +64,12 @@ function diaDaColuna(c: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
+/** "Check-in D2 Manhã" → "d2m", "Check-in D3 Tarde" → "d3t" (mesmas chaves do painel). */
+function turnoDaColuna(c: string): string | null {
+  const m = chave(c).match(/^(?:check_?in_?)?d([123])_?(manha|tarde)$/);
+  return m ? `d${m[1]}${m[2] === "manha" ? "m" : "t"}` : null;
+}
+
 const SIM = new Set(["sim", "s", "x", "true", "1", "presente", "yes"]);
 const marcado = (v: unknown) => v === true || SIM.has(String(v ?? "").trim().toLowerCase());
 const texto = (v: unknown) => (vazio(v) ? null : String(v).trim());
@@ -84,7 +90,14 @@ export function inscritosDaPlanilha(linhas: LinhaPlanilha[]): LeituraInscritos {
     const d = diaDaColuna(c);
     if (d && !dias.has(d)) dias.set(d, c);
   }
-  const usadas = new Set<string>([...Object.values(col), ...dias.values()].filter((c): c is string => !!c));
+  const turnos = new Map<string, string>();
+  for (const c of cabecalhos) {
+    const t = turnoDaColuna(c);
+    if (t && !turnos.has(t)) turnos.set(t, c);
+  }
+  const usadas = new Set<string>(
+    [...Object.values(col), ...dias.values(), ...turnos.values()].filter((c): c is string => !!c)
+  );
 
   const porEmail = new Map<string, InscritoDaPlanilha>();
   let descartados = 0;
@@ -97,6 +110,12 @@ export function inscritosDaPlanilha(linhas: LinhaPlanilha[]): LeituraInscritos {
     const extras: Record<string, unknown> = {};
     for (const c of cabecalhos) {
       if (!usadas.has(c) && !vazio(linha[c])) extras[chave(c)] = String(linha[c]).trim();
+    }
+    // Check-in por turno vira `sessoes`, no mesmo formato do painel.
+    if (turnos.size) {
+      extras.sessoes = Object.fromEntries(
+        [...turnos].map(([t, c]) => [t, vazio(linha[c]) ? "Não" : String(linha[c]).trim()])
+      );
     }
     const dia = (d: number) => (dias.has(d) ? marcado(linha[dias.get(d)!]) : false);
     porEmail.set(email, {
