@@ -32,7 +32,7 @@ import {
   type FiltroDia,
   type FiltroPresenca,
 } from "@/lib/participantes";
-import { filtrarRecorte, resumoPeriodos, temTurnos } from "@/lib/periodos";
+import { filtrarRecorte, RECORTES, temTurnos } from "@/lib/periodos";
 import type { Abordagem, Evento, Usuario, Venda } from "@/lib/types";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -126,15 +126,14 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
   }
 
   /** Busca + filtro por resposta: a base que os outros filtros recortam. */
-  const buscar = (l: Inscrito[]) =>
-    filtrarRecorte(filtrarResposta(filtrarParticipantes(l, termo), campoResp, valorResp), recorte);
+  const buscar = (l: Inscrito[]) => filtrarResposta(filtrarParticipantes(l, termo), campoResp, valorResp);
 
   const lista = useMemo(
     () =>
       inscritos
         ? ordenarParticipantes(
             filtrarClasse(
-              filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia),
+              filtrarRecorte(filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia), recorte),
               classes
             )
           )
@@ -148,7 +147,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     () =>
       contarPorClasse(
         inscritos
-          ? filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia)
+          ? filtrarRecorte(filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia), recorte)
           : []
       ),
     [inscritos, termo, campoResp, valorResp, recorte, presenca, aluno, dia]
@@ -160,10 +159,15 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
       contarPorDia(
         inscritos ? filtrarClasse(filtrarAluno(buscar(inscritos), aluno), classes) : []
       ),
-    [inscritos, termo, campoResp, valorResp, recorte, aluno, classes]
+    [inscritos, termo, campoResp, valorResp, aluno, classes]
   );
   /** Base das porcentagens dos chips: presentes com dia marcado. */
   const comDia = COMBINACOES.reduce((s, c) => s + porDia[c.chave], 0);
+
+  function escolherDia(v: FiltroDia) {
+    setDia(v);
+    setRecorte("");
+  }
 
   function alternarClasse(c: Classe) {
     setClasses((atual) => {
@@ -182,11 +186,14 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     () => (inscritos && campoResp ? valoresDoCampo(inscritos, campoResp) : []),
     [inscritos, campoResp]
   );
-  /** Recortes por período (manhã/tarde) com contagem — só se a base tem turnos. */
-  const periodos = useMemo(
-    () => (inscritos && temTurnos(inscritos) ? resumoPeriodos(inscritos).linhas : []),
-    [inscritos]
-  );
+  /** Chips de período (manhã/tarde): mesma base dos chips de dia. Só
+   *  aparecem se a base importada tem check-in por turno. */
+  const temPeriodos = useMemo(() => (inscritos ? temTurnos(inscritos) : false), [inscritos]);
+  const porPeriodo = useMemo(() => {
+    const base = inscritos ? filtrarClasse(filtrarAluno(buscar(inscritos), aluno), classes) : [];
+    return Object.fromEntries(CHIPS_PERIODO.map((c) => [c.valor, filtrarRecorte(base, c.valor).length]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inscritos, termo, campoResp, valorResp, aluno, classes]);
   const filtrando = Boolean(termo) || Boolean(valorResp) || Boolean(recorte) || presenca !== "todos" || aluno !== "todos" || dia !== "todos" || classes.size > 0;
 
   if (inscritos === null) return <Empty>Carregando…</Empty>;
@@ -257,23 +264,6 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
               )}
             </div>
           )}
-          {/* Período: D1, D2 manhã/tarde, combinações e novos — os mesmos
-              recortes do painel, com a frase do que cada um conta. */}
-          {periodos.length > 0 && (
-            <div className="mt-3">
-              <Select value={recorte} onChange={(e) => setRecorte(e.target.value)} aria-label="Filtrar por período">
-                <option value="">Todos os períodos</option>
-                {periodos.map((l) => (
-                  <option key={l.chave} value={l.chave}>
-                    {l.label} ({l.n})
-                  </option>
-                ))}
-              </Select>
-              {recorte && (
-                <p className="mt-1 text-xs text-muted">{periodos.find((l) => l.chave === recorte)?.descricao}</p>
-              )}
-            </div>
-          )}
           {/* Filtros rápidos: o time quer olhar "só quem está no salão" sem
               abrir ficha por ficha. Presença e aluno combinam entre si. */}
           <div className="mt-3 flex flex-wrap gap-2">
@@ -302,7 +292,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
           <div className="mt-3 space-y-1.5">
             <DiaChips
               valor={dia}
-              onChange={setDia}
+              onChange={escolherDia}
               opcoes={[
                 { valor: "d1", label: "1º dia" },
                 { valor: "d2", label: "2º dia" },
@@ -313,11 +303,30 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
             />
             <DiaChips
               valor={dia}
-              onChange={setDia}
+              onChange={escolherDia}
               opcoes={COMBINACOES.map((c) => ({ valor: c.chave, label: c.label }))}
               contagem={porDia}
               base={comDia}
             />
+            {/* Manhã e tarde (check-in por turno). Exclusivo com os de cima:
+                tocar num período desliga o dia, e vice-versa. */}
+            {temPeriodos && (
+              <>
+                <DiaChips
+                  valor={recorte || "todos"}
+                  onChange={(v) => {
+                    setRecorte(v === "todos" ? "" : v);
+                    setDia("todos");
+                  }}
+                  opcoes={CHIPS_PERIODO}
+                  contagem={porPeriodo}
+                  base={comDia}
+                />
+                {recorte && (
+                  <p className="text-xs text-muted">{RECORTES.find((r) => r.chave === recorte)?.descricao}</p>
+                )}
+              </>
+            )}
           </div>
           {/* Lead Score: filtro e legenda ao mesmo tempo. Cores do painel;
               toque liga/desliga a classe, pode marcar várias. */}
@@ -578,18 +587,28 @@ function Ficha({
 
 // ── Peças ──────────────────────────────────────────────────────────────
 
+/** Chips de período, na ordem da tela (chaves de RECORTES em lib/periodos). */
+const CHIPS_PERIODO: { valor: string; label: string }[] = [
+  { valor: "p_d2m", label: "2º dia manhã" },
+  { valor: "p_d2t", label: "2º dia tarde" },
+  { valor: "p_d3m", label: "3º dia manhã" },
+  { valor: "p_d3t", label: "3º dia tarde" },
+  { valor: "c_d2t", label: "Só tarde (2º)" },
+  { valor: "n_d2t", label: "Novos à tarde (2º)" },
+];
+
 /** Chips de dia: número e % no próprio chip; tocar no ativo desliga. */
-function DiaChips({
+function DiaChips<T extends string>({
   valor,
   onChange,
   opcoes,
   contagem,
   base,
 }: {
-  valor: FiltroDia;
-  onChange: (v: FiltroDia) => void;
-  opcoes: { valor: FiltroDia; label: string }[];
-  contagem: Record<FiltroDia, number>;
+  valor: T | "todos";
+  onChange: (v: T | "todos") => void;
+  opcoes: { valor: T; label: string }[];
+  contagem: Record<string, number>;
   base: number;
 }) {
   return (
