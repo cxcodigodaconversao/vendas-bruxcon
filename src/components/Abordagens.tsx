@@ -258,8 +258,9 @@ export function Abordagens({ evento, perfil }: { evento: Evento; perfil: Usuario
                     {BASE_FIXA
                       ? "O que a mentoria DTC Master entrega já está fixo no app para toda a equipe. "
                       : "Escreva o que a mentoria DTC Master entrega (para quem é, como funciona, o que o aluno recebe, garantia). Sem isso, a IA fala da mentoria só em termos gerais, porque não pode inventar entregável. "}
-                    A IA não fala de duração, preço ou número de encontros com o(a) mentor(a), porque ainda não
-                    foram confirmados.
+                    {BASE_FIXA
+                      ? "Pilares, entregáveis, bônus, garantia e o investimento real (12x de R$ 2.997 ou R$ 29.997 à vista). A IA não cita datas de turma nem outros preços."
+                      : "A IA não fala de duração, preço ou número de encontros com o(a) mentor(a), porque ainda não foram confirmados."}
                   </p>
                   <Textarea
                     className="mt-2"

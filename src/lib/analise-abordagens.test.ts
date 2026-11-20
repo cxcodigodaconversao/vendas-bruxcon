@@ -104,22 +104,21 @@ describe("montarPrompt", () => {
     expect(prompt).toContain("Produtos cadastrados neste evento: Mentoria Premium.");
     expect(prompt).toContain("Encontros quinzenais com o mentor.");
     expect(prompt.indexOf("<mentoria>")).toBeLessThan(prompt.indexOf("<anotacoes>"));
-    // Sem base fixa nem texto da equipe, o bloco só leva o nome da mentoria.
+    // A base fixa do DTC Master vai sempre, mesmo sem nada escrito na tela.
     const base = montarPrompt(conversas).prompt;
-    expect(base).toContain("Nome: mentoria DTC Master.");
-    expect(base).toContain("Nada informado sobre a mentoria");
+    expect(base).toContain("DTC Master Bruxismo");
+    expect(base).toContain("12 análises de casos clínicos");
   });
 
-  it("não leva ao modelo o que ainda não foi confirmado", () => {
-    const tudo = SISTEMA_ANALISE + montarPrompt(conversas).prompt;
-    // Preço e parcela dos slides não batem entre si; duração não consta.
-    expect(tudo).not.toContain("60.000");
-    expect(tudo).not.toContain("2.997");
-    expect(tudo).not.toMatch(/\b\d+ meses de mentoria/i);
-    expect(SISTEMA_ANALISE).toContain("a duração da mentoria");
-    expect(SISTEMA_ANALISE).toContain("o preço, o valor das parcelas");
-    expect(SISTEMA_ANALISE).toContain("quantos encontros são diretamente com o(a) mentor(a)");
-    expect(tudo).not.toMatch(/Cristina|DSD|odontologia/);
+  it("leva só o preço confirmado e nenhuma data de turma", () => {
+    const base = montarPrompt(conversas).prompt;
+    const tudo = SISTEMA_ANALISE + base;
+    // Valores dos slides estão errados; o real é 12x 2.997 ou 29.997 à vista.
+    expect(base).toContain("12x de R$ 2.997 (R$ 35.964) ou R$ 29.997 à vista");
+    for (const errado of ["4.997", "53.967", "3.997", "39.997"]) expect(tudo).not.toContain(errado);
+    expect(tudo).not.toMatch(/maio|outubro|março|julho/i);
+    expect(SISTEMA_ANALISE).toContain("datas de encontros presenciais");
+    expect(tudo).not.toMatch(/Cristina|DSD/);
   });
 
   it("respeita o teto ficando com as mais recentes", () => {
