@@ -8,7 +8,12 @@ import { fmtVal } from "@/lib/config";
 import { CLASSES, normalizarEmail, type Classe, type Inscrito } from "@/lib/analise";
 import {
   abordagensPorEmail,
+  closerDe,
+  closerDoPainel,
+  closerDoUsuario,
+  closerManual,
   COMBINACOES,
+  contarPorCloser,
   contarPorClasse,
   contarPorDia,
   camposDisponiveis,
@@ -18,15 +23,18 @@ import {
   ehNaoAluno,
   filtrarAluno,
   filtrarClasse,
+  filtrarCloser,
   filtrarDia,
   filtrarParticipantes,
   filtrarPresenca,
   filtrarResposta,
   linkInstagram,
   linkWhatsapp,
+  opcoesDeCloser,
   ordenarParticipantes,
   resumoPresenca,
   rotulosPresenca,
+  SEM_CLOSER,
   valoresDoCampo,
   type FiltroAluno,
   type FiltroDia,
@@ -34,6 +42,7 @@ import {
 } from "@/lib/participantes";
 import { filtrarRecorte, RECORTES, temTurnos } from "@/lib/periodos";
 import type { Abordagem, Evento, Usuario, Venda } from "@/lib/types";
+import { useUsuarios } from "@/lib/useUsuarios";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, Empty, SectionLabel } from "./ui/card";
@@ -62,6 +71,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
   const [campoResp, setCampoResp] = useState("");
   const [valorResp, setValorResp] = useState("");
   const [recorte, setRecorte] = useState("");
+  const [closer, setCloser] = useState<string>("todos");
   const [aberto, setAberto] = useState<Inscrito | null>(null);
   const [abordagens, setAbordagens] = useState<Abordagem[]>([]);
 
@@ -76,13 +86,21 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     setCampoResp("");
     setValorResp("");
     setRecorte("");
+    setCloser("todos");
     (async () => {
       const { data, error } = await supabase
         .from("inscritos")
         .select(SELECT_INSCRITO)
         .eq("evento_id", evento.id);
       if (error) return toast("erro", "Não foi possível carregar os participantes.", error.message);
-      setInscritos((data ?? []) as unknown as Inscrito[]);
+      const listaBase = (data ?? []) as unknown as Inscrito[];
+      setInscritos(listaBase);
+      // Closer logado já abre vendo só os leads dele (pode trocar no chip).
+      if (perfil.papel === "closer") {
+        const nomes = [...new Set(listaBase.map(closerDe).filter((c): c is string => Boolean(c)))];
+        const meu = closerDoUsuario(perfil.nome, nomes);
+        if (meu) setCloser(meu);
+      }
       const { data: abs } = await supabase
         .from("abordagens")
         .select(SELECT_ABORDAGEM)
@@ -125,6 +143,41 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     return true;
   }
 
+  /** Cadastra o closer de uma lead que o painel trouxe sem closer. Vai pela
+   *  API (a tabela não aceita escrita direta) e atualiza a tela na hora. */
+  async function definirCloser(email: string, nome: string) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error("Sessão expirada. Entre novamente.");
+      const res = await fetch("/api/inscritos/closer", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ eventoId: evento.id, email, closer: nome }),
+      });
+      const corpo = await res.json();
+      if (!res.ok) throw new Error(corpo.error || `Erro ${res.status}.`);
+      const extras = corpo.extras as Inscrito["extras"];
+      setInscritos((l) => (l ? l.map((i) => (i.email === email ? { ...i, extras } : i)) : l));
+      setAberto((a) => (a && a.email === email ? { ...a, extras } : a));
+      toast("sucesso", nome ? `Closer definido: ${nome}.` : "Closer removido.");
+      return true;
+    } catch (e) {
+      toast("erro", "Não foi possível salvar o closer.", (e as Error).message);
+      return false;
+    }
+  }
+
+  const { usuarios } = useUsuarios();
+  const opcoesCloser = useMemo(
+    () =>
+      opcoesDeCloser(
+        inscritos ?? [],
+        usuarios.filter((u) => u.ativo && u.papel === "closer").map((u) => u.nome)
+      ),
+    [inscritos, usuarios]
+  );
+
   /** Busca + filtro por resposta: a base que os outros filtros recortam. */
   const buscar = (l: Inscrito[]) => filtrarResposta(filtrarParticipantes(l, termo), campoResp, valorResp);
 
@@ -132,13 +185,16 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     () =>
       inscritos
         ? ordenarParticipantes(
-            filtrarClasse(
-              filtrarRecorte(filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia), recorte),
-              classes
+            filtrarCloser(
+              filtrarClasse(
+                filtrarRecorte(filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia), recorte),
+                classes
+              ),
+              closer
             )
           )
         : [],
-    [inscritos, termo, campoResp, valorResp, recorte, presenca, aluno, dia, classes]
+    [inscritos, termo, campoResp, valorResp, recorte, presenca, aluno, dia, classes, closer]
   );
 
   /** Contagem por classe respeitando os OUTROS filtros (busca, presença,
@@ -147,20 +203,39 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
     () =>
       contarPorClasse(
         inscritos
-          ? filtrarRecorte(filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia), recorte)
+          ? filtrarCloser(
+              filtrarRecorte(filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia), recorte),
+              closer
+            )
           : []
       ),
-    [inscritos, termo, campoResp, valorResp, recorte, presenca, aluno, dia]
+    [inscritos, termo, campoResp, valorResp, recorte, presenca, aluno, dia, closer]
   );
 
   /** Mesma ideia para os chips de dia: respeitam busca, aluno e classe. */
   const porDia = useMemo(
     () =>
       contarPorDia(
-        inscritos ? filtrarClasse(filtrarAluno(buscar(inscritos), aluno), classes) : []
+        inscritos ? filtrarCloser(filtrarClasse(filtrarAluno(buscar(inscritos), aluno), classes), closer) : []
       ),
-    [inscritos, termo, campoResp, valorResp, aluno, classes]
+    [inscritos, termo, campoResp, valorResp, aluno, classes, closer]
   );
+  /** Closers da base, contados com os OUTROS filtros (busca, presença,
+   *  aluno, dia, período, classe). */
+  const semFiltroDeCloser = useMemo(
+    () =>
+      inscritos
+        ? filtrarClasse(
+            filtrarRecorte(filtrarDia(filtrarAluno(filtrarPresenca(buscar(inscritos), presenca), aluno), dia), recorte),
+            classes
+          )
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [inscritos, termo, campoResp, valorResp, recorte, presenca, aluno, dia, classes]
+  );
+  const porCloser = useMemo(() => contarPorCloser(semFiltroDeCloser), [semFiltroDeCloser]);
+  const semCloser = useMemo(() => filtrarCloser(semFiltroDeCloser, SEM_CLOSER).length, [semFiltroDeCloser]);
+  const temCloser = useMemo(() => (inscritos ?? []).some((i) => closerDe(i)), [inscritos]);
   /** Base das porcentagens dos chips: presentes com dia marcado. */
   const comDia = COMBINACOES.reduce((s, c) => s + porDia[c.chave], 0);
 
@@ -190,11 +265,11 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
    *  aparecem se a base importada tem check-in por turno. */
   const temPeriodos = useMemo(() => (inscritos ? temTurnos(inscritos) : false), [inscritos]);
   const porPeriodo = useMemo(() => {
-    const base = inscritos ? filtrarClasse(filtrarAluno(buscar(inscritos), aluno), classes) : [];
+    const base = inscritos ? filtrarCloser(filtrarClasse(filtrarAluno(buscar(inscritos), aluno), classes), closer) : [];
     return Object.fromEntries(CHIPS_PERIODO.map((c) => [c.valor, filtrarRecorte(base, c.valor).length]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inscritos, termo, campoResp, valorResp, aluno, classes]);
-  const filtrando = Boolean(termo) || Boolean(valorResp) || Boolean(recorte) || presenca !== "todos" || aluno !== "todos" || dia !== "todos" || classes.size > 0;
+  }, [inscritos, termo, campoResp, valorResp, aluno, classes, closer]);
+  const filtrando = Boolean(termo) || Boolean(valorResp) || Boolean(recorte) || presenca !== "todos" || aluno !== "todos" || dia !== "todos" || classes.size > 0 || closer !== "todos";
 
   if (inscritos === null) return <Empty>Carregando…</Empty>;
   if (!inscritos.length) {
@@ -208,6 +283,9 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
         vendas={compradores.get(aberto.email) ?? []}
         abordagens={porEmail.get(aberto.email) ?? []}
         onRegistrar={(obs) => registrarAbordagem(aberto.email, obs)}
+        opcoesCloser={opcoesCloser}
+        podeDefinirCloser={perfil.papel !== "promotor"}
+        onDefinirCloser={(nome) => definirCloser(aberto.email, nome)}
         onVoltar={() => setAberto(null)}
       />
     );
@@ -328,6 +406,39 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
               </>
             )}
           </div>
+          {/* Closer responsável pela lead (planilha do Clint ou cadastrado no app). */}
+          {!temCloser && (
+            <p className="mt-3 rounded-md border border-dashed border-border-strong px-3 py-2 text-xs text-muted-foreground">
+              <span className="font-medium">Closer:</span> a base deste evento ainda não traz o closer de cada lead.
+              Um admin pode subir na aba Análise a planilha de confirmados do Clint (coluna “Quem confirmou”), ou
+              defina o closer na ficha de cada lead.
+            </p>
+          )}
+          {temCloser && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 text-xs font-medium text-muted-foreground">Closer</span>
+              {[
+                { valor: "todos", label: "Todos" },
+                ...porCloser.map((c) => ({ valor: c.closer, label: `${c.closer} · ${c.n}` })),
+                { valor: SEM_CLOSER, label: `Sem closer · ${semCloser}` },
+              ].map((o) => {
+                const ativo = closer === o.valor;
+                return (
+                  <button
+                    key={o.valor}
+                    type="button"
+                    aria-pressed={ativo}
+                    onClick={() => setCloser(ativo ? "todos" : o.valor)}
+                    className={`h-7 rounded-full border border-border-strong px-2.5 text-xs font-medium transition-colors ${
+                      ativo ? "bg-foreground text-background" : "bg-card text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {/* Lead Score: filtro e legenda ao mesmo tempo. Cores do painel;
               toque liga/desliga a classe, pode marcar várias. */}
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -389,16 +500,41 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
         <Card>
           <CardContent className="divide-y divide-border pt-0">
             {lista.map((i) => (
+              <div key={i.email} className="flex items-center gap-3">
+              {/* Instagram a um toque, sem abrir a ficha: é como o time
+                  reconhece a pessoa no salão. Fica fora do botão da linha
+                  (link dentro de botão não é HTML válido). */}
+              {linkInstagram(i.extras.instagram) ? (
+                <a
+                  href={linkInstagram(i.extras.instagram)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Instagram de ${i.nome}`}
+                  title="Abrir Instagram"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
+                  style={{ background: "linear-gradient(45deg,#f09433,#dc2743 50%,#bc1888)" }}
+                >
+                  <Instagram className="h-5 w-5" />
+                </a>
+              ) : (
+                <span
+                  aria-hidden
+                  title="Sem Instagram na base"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-border-strong text-muted opacity-50"
+                >
+                  <Instagram className="h-5 w-5" />
+                </span>
+              )}
               <button
-                key={i.email}
                 onClick={() => setAberto(i)}
-                className="flex w-full items-center gap-3 py-3 text-left"
+                className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left"
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{i.nome}</span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {rotulosPresenca(i).length ? "Presente" : "Sem check-in"}
                     {i.contatoConfirmou === "Confirmou" ? " · Confirmou" : ""}
+                    {closerDe(i) ? ` · Closer: ${closerDe(i)}` : ""}
                   </span>
                   {/* Quem fechou aparece embaixo do nome: na lista cheia é o que
                       o time pergunta primeiro ("quem já pegou essa?"). */}
@@ -440,6 +576,7 @@ export function Participantes({ evento, vendas, perfil }: { evento: Evento; vend
                   {compradores.has(i.email) && <Badge tone="success">Comprou</Badge>}
                 </span>
               </button>
+              </div>
             ))}
           </CardContent>
         </Card>
@@ -455,14 +592,34 @@ function Ficha({
   vendas,
   abordagens,
   onRegistrar,
+  opcoesCloser,
+  podeDefinirCloser,
+  onDefinirCloser,
   onVoltar,
 }: {
   inscrito: Inscrito;
   vendas: Venda[];
   abordagens: Abordagem[];
   onRegistrar: (observacao: string) => Promise<boolean>;
+  opcoesCloser: string[];
+  podeDefinirCloser: boolean;
+  onDefinirCloser: (nome: string) => Promise<boolean>;
   onVoltar: () => void;
 }) {
+  const doPainel = closerDoPainel(i);
+  const manual = closerManual(i);
+  const [escolha, setEscolha] = useState(manual ?? "");
+  const [salvandoCloser, setSalvandoCloser] = useState(false);
+  useEffect(() => setEscolha(manual ?? ""), [manual, i.email]);
+  // Se o nome salvo não está mais entre as opções, continua selecionável.
+  const opcoes = manual && !opcoesCloser.includes(manual) ? [...opcoesCloser, manual] : opcoesCloser;
+
+  async function salvarCloser() {
+    setSalvandoCloser(true);
+    await onDefinirCloser(escolha);
+    setSalvandoCloser(false);
+  }
+
   const wa = linkWhatsapp(i.whatsapp);
   const ig = linkInstagram(i.extras.instagram);
   const secoes = fichaDoInscrito(i);
@@ -506,6 +663,47 @@ function Ficha({
                 </Button>
               )}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Closer responsável: o que veio da planilha só é mostrado; lead sem
+          closer pode ganhar um aqui, e a escolha vale para o time todo. */}
+      <Card className="mb-3">
+        <CardContent className="pt-4">
+          <SectionLabel>Closer responsável</SectionLabel>
+          {doPainel ? (
+            <p className="mt-1 text-sm">
+              <span className="font-medium">{doPainel}</span>
+              <span className="text-xs text-muted"> · definido na planilha de confirmados</span>
+            </p>
+          ) : podeDefinirCloser ? (
+            <>
+              <div className="mt-2 flex gap-2">
+                <Select value={escolha} onChange={(e) => setEscolha(e.target.value)} aria-label="Closer responsável">
+                  <option value="">Sem closer</option>
+                  {opcoes.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  variant="accent"
+                  disabled={salvandoCloser || escolha === (manual ?? "")}
+                  onClick={salvarCloser}
+                >
+                  {salvandoCloser ? "Salvando..." : "Salvar"}
+                </Button>
+              </div>
+              <p className="mt-1.5 text-xs text-muted">
+                {manual
+                  ? `Cadastrado no app${i.extras.closer_manual_por ? ` por ${String(i.extras.closer_manual_por)}` : ""}. Vale para o time todo e continua valendo quando o painel for atualizado.`
+                  : "Esta lead veio sem closer. Escolha um nome e toque em Salvar."}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">{manual ?? "Sem closer"}</p>
           )}
         </CardContent>
       </Card>

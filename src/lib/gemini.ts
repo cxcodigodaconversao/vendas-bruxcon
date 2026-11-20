@@ -63,6 +63,17 @@ const ehLimiteDeTaxa = (msg: string) =>
   msg.toLowerCase().includes("quota") ||
   msg.toLowerCase().includes("resource_exhausted");
 
+export type OpcoesDeGeracao = {
+  /** Modelos a tentar ANTES da fila padrão (ex.: um mais rápido). */
+  modelos?: string[];
+  /**
+   * Tempo total que a chamada pode levar. A hospedagem mata a função sem
+   * devolver motivo quando ela passa do limite; com o prazo, quem desiste
+   * é este código, e o erro chega escrito na tela.
+   */
+  prazoMs?: number;
+};
+
 /**
  * Gera texto tentando os candidatos em ordem. Só um 404 de modelo faz
  * passar para o próximo: erro de chave se repetiria igual em todos, e
@@ -71,8 +82,18 @@ const ehLimiteDeTaxa = (msg: string) =>
  * Limite de taxa é a exceção: acontece quando duas pessoas geram no mesmo
  * segundo, e uma segunda tentativa costuma passar. Sem isso, o promotor vê
  * um erro que não é dele e que some sozinho — o pior tipo de erro.
+ *
+ * `config` é o generationConfig opcional (ex.: resposta em JSON, sem
+ * "pensamento" para caber no tempo da função). Se o modelo recusar a
+ * configuração, a mesma chamada é refeita sem ela: melhor uma resposta
+ * mais lenta do que nenhuma.
  */
-export async function gerarTexto(sistema: string, prompt: string): Promise<string> {
+export async function gerarTexto(
+  sistema: string,
+  prompt: string,
+  config?: Record<string, unknown>,
+  opcoes: OpcoesDeGeracao = {}
+): Promise<string> {
   const chave = process.env.GEMINI_API_KEY;
   if (!chave) {
     throw new ErroIA("GEMINI_API_KEY não configurada no servidor.", 500);
@@ -80,11 +101,30 @@ export async function gerarTexto(sistema: string, prompt: string): Promise<strin
 
   const genAI = new GoogleGenerativeAI(chave);
   let ultimoErro = "";
+  const inicio = Date.now();
+  const restante = () => (opcoes.prazoMs ? opcoes.prazoMs - (Date.now() - inicio) : Infinity);
+  const estourou = (modelo: string) =>
+    new ErroIA(
+      `A IA (${modelo}) não respondeu em ${Math.round((opcoes.prazoMs ?? 0) / 1000)} segundos. ` +
+        "Toque em gerar de novo; se repetir, avise o suporte.",
+      504
+    );
+  const fila = [...new Set([...(opcoes.modelos ?? []), ...CANDIDATOS])];
 
-  for (const modelo of CANDIDATOS) {
-    for (let tentativa = 0; tentativa < 2; tentativa++) {
+  for (const modelo of fila) {
+    let usarConfig = Boolean(config);
+    let esperou = false;
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      if (restante() < 1000) throw estourou(modelo);
       try {
-        const m = genAI.getGenerativeModel({ model: modelo, systemInstruction: sistema });
+        const m = genAI.getGenerativeModel(
+          {
+            model: modelo,
+            systemInstruction: sistema,
+            ...(usarConfig ? { generationConfig: config as never } : {}),
+          },
+          opcoes.prazoMs ? { timeout: restante() } : undefined
+        );
         const r = await m.generateContent(prompt);
         const texto = r.response.text().trim();
         if (texto) return texto;
@@ -93,13 +133,19 @@ export async function gerarTexto(sistema: string, prompt: string): Promise<strin
       } catch (e) {
         const msg = (e as Error).message ?? "";
         ultimoErro = msg;
+        if (restante() < 1000) throw estourou(modelo);
 
-        if (ehLimiteDeTaxa(msg) && tentativa === 0) {
+        if (ehLimiteDeTaxa(msg) && !esperou) {
+          esperou = true;
           await espera(1500);
           continue;
         }
 
         const modeloIndisponivel = msg.includes("404") || msg.toLowerCase().includes("not found");
+        if (!modeloIndisponivel && usarConfig && !ehLimiteDeTaxa(msg)) {
+          usarConfig = false;
+          continue;
+        }
         if (!modeloIndisponivel) {
           // Nem 404 nem limite de taxa: trocar de modelo não resolveria.
           return await falhar(chave, ultimoErro);

@@ -22,6 +22,7 @@ import { Logo } from "./Logo";
 import { SeletorProjeto } from "./SeletorProjeto";
 import { Analise } from "./Analise";
 import { Participantes } from "./Participantes";
+import { Abordagens } from "./Abordagens";
 import { Registrar } from "./Registrar";
 import { Ranking } from "./Ranking";
 import { MeusPontos } from "./MeusPontos";
@@ -44,7 +45,8 @@ type Aba =
   | "usuarios"
   | "contrato"
   | "analise"
-  | "participantes";
+  | "participantes"
+  | "abordagens";
 
 export function AppShell({ perfil }: { perfil: Usuario }) {
   const isAdmin = perfil.papel === "admin";
@@ -88,6 +90,7 @@ export function AppShell({ perfil }: { perfil: Usuario }) {
     // Participantes: toda a equipe consulta a ficha antes de abordar.
     // Análise: agregados do evento, mesma regra do Ranking.
     lista.push({ id: "participantes", label: "Participantes" });
+    lista.push({ id: "abordagens", label: "Abordagens" });
     if (veTudo) lista.push({ id: "analise", label: "Análise" });
     return lista;
   }, [veTudo, isPromotor]);
@@ -182,6 +185,7 @@ export function AppShell({ perfil }: { perfil: Usuario }) {
         {aba === "participantes" && (
           <Participantes evento={evento} vendas={vendas} perfil={perfil} />
         )}
+        {aba === "abordagens" && <Abordagens evento={evento} perfil={perfil} />}
       </main>
 
       {menuAberto && (

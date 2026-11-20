@@ -268,6 +268,135 @@ export function ordenarParticipantes(lista: Inscrito[]): Inscrito[] {
   );
 }
 
+// ── Closer responsável ──────────────────────────────────────────────────
+//
+// O painel (ou a planilha de confirmados do Clint) traz o closer de cada
+// lead em `extras.closer` ou `extras.quem_confirmou`. Lead que veio sem
+// closer pode ganhar um no app (`extras.closer_manual`, ver a rota
+// /api/inscritos/closer). Base sem closer nenhum: a tela avisa.
+
+const textoOuNull = (v: unknown) => (typeof v === "string" ? v.trim() : "") || null;
+
+/** Nome do closer responsável pela lead, ou null se ninguém definiu. */
+export function closerDe(i: Pick<Inscrito, "extras">): string | null {
+  return closerDoPainel(i) ?? closerManual(i);
+}
+
+/** Closer que veio do painel importado (planilha do Clint). */
+export function closerDoPainel(i: Pick<Inscrito, "extras">): string | null {
+  return textoOuNull(i.extras.closer) ?? textoOuNull(i.extras.quem_confirmou);
+}
+
+/** Closer cadastrado à mão no app, para lead que o painel trouxe sem closer. */
+export function closerManual(i: Pick<Inscrito, "extras">): string | null {
+  return textoOuNull(i.extras.closer_manual);
+}
+
+/**
+ * Importar um painel novo apaga e regrava a base. Esta função leva para as
+ * linhas novas o closer cadastrado à mão nas antigas (por e-mail), para a
+ * atribuição do time não se perder a cada atualização do painel.
+ */
+export function preservarCloserManual<T extends { email: string; extras: Record<string, unknown> }>(
+  novos: T[],
+  antigos: { email: string; extras: Record<string, unknown> | null }[]
+): T[] {
+  const manual = new Map<string, Record<string, unknown>>();
+  for (const a of antigos) {
+    if (textoOuNull(a.extras?.closer_manual)) {
+      const e = a.extras!;
+      manual.set(a.email, {
+        closer_manual: e.closer_manual,
+        ...(e.closer_manual_por ? { closer_manual_por: e.closer_manual_por } : {}),
+        ...(e.closer_manual_em ? { closer_manual_em: e.closer_manual_em } : {}),
+      });
+    }
+  }
+  if (!manual.size) return novos;
+  return novos.map((n) => {
+    const m = manual.get(n.email);
+    return m ? { ...n, extras: { ...n.extras, ...m } } : n;
+  });
+}
+
+/**
+ * O closer da base que corresponde ao usuário logado, pelo primeiro nome
+ * (sem acento/caixa): "Mila Pinheiro" → "Mila". Null se não bater com
+ * nenhum — aí a pessoa começa vendo todos.
+ */
+export function closerDoUsuario(nomeUsuario: string, closers: string[]): string | null {
+  const primeiro = (s: string) => semAcento(s).split(/\s+/)[0] ?? "";
+  const meu = primeiro(nomeUsuario);
+  if (!meu) return null;
+  return closers.find((c) => semAcento(c) === semAcento(nomeUsuario)) ?? closers.find((c) => primeiro(c) === meu) ?? null;
+}
+
+/**
+ * Nomes que podem ser escolhidos como closer de uma lead: os que já existem
+ * na base + os usuários closers ativos que ainda não aparecem nela (pelo
+ * primeiro nome, para "Mila Pinheiro" não duplicar a "Mila" da planilha).
+ */
+export function opcoesDeCloser(lista: Inscrito[], nomesDeUsuarios: string[]): string[] {
+  const base = contarPorCloser(lista).map((c) => c.closer);
+  const extras = nomesDeUsuarios.map((n) => n.trim()).filter((n) => n && !closerDoUsuario(n, base));
+  return [...base, ...[...new Set(extras)].sort((a, b) => a.localeCompare(b, "pt-BR"))];
+}
+
+/** "todos", SEM_CLOSER (leads sem closer) ou o nome de um closer. */
+export type FiltroCloser = string;
+export const SEM_CLOSER = "__sem__";
+
+export function filtrarCloser(lista: Inscrito[], filtro: FiltroCloser): Inscrito[] {
+  if (!filtro || filtro === "todos") return lista;
+  if (filtro === SEM_CLOSER) return lista.filter((i) => !closerDe(i));
+  return lista.filter((i) => closerDe(i) === filtro);
+}
+
+/** Closers presentes na lista, com quantas leads cada um tem (maior primeiro). */
+export function contarPorCloser(lista: Inscrito[]): { closer: string; n: number }[] {
+  const m = new Map<string, number>();
+  for (const i of lista) {
+    const c = closerDe(i);
+    if (c) m.set(c, (m.get(c) ?? 0) + 1);
+  }
+  return [...m.entries()]
+    .map(([closer, n]) => ({ closer, n }))
+    .sort((a, b) => b.n - a.n || a.closer.localeCompare(b.closer, "pt-BR"));
+}
+
+export type LinhaCloser = {
+  closer: string;
+  semCloser: boolean;
+  leads: number;
+  presentes: number;
+  mql: number;
+  mqlPresentes: number;
+};
+
+/**
+ * Divisão da base por closer para a aba Análise: leads, presentes, MQL
+ * (AA+A+B) e MQL presentes de cada um, com "Sem closer" por último.
+ * Base sem closer nenhum → lista vazia (o card não aparece).
+ */
+export function resumoPorCloser(lista: Inscrito[]): LinhaCloser[] {
+  if (!lista.some((i) => closerDe(i))) return [];
+  const linha = (closer: string, semCloser: boolean, g: Inscrito[]): LinhaCloser => {
+    const mql = g.filter((i) => i.classe === "AA" || i.classe === "A" || i.classe === "B");
+    return {
+      closer,
+      semCloser,
+      leads: g.length,
+      presentes: g.filter(estaPresente).length,
+      mql: mql.length,
+      mqlPresentes: mql.filter(estaPresente).length,
+    };
+  };
+  const saida = contarPorCloser(lista).map((c) => linha(c.closer, false, filtrarCloser(lista, c.closer)));
+  const sem = filtrarCloser(lista, SEM_CLOSER);
+  if (sem.length) saida.push(linha("Sem closer", true, sem));
+  return saida;
+}
+
 // ── Detalhe: os campos "soltos" que vieram do painel ────────────────────
 
 /**
@@ -340,7 +469,8 @@ const CHAVES_DA_FICHA = new Set([
   "campanha", "utm_source", "criativo", "inscricao_em", "comprou_ingresso", "valor_compra",
   "metodo_pag", "data_compra", "sessoes", "nps", "pre_checkin", "eticket", "pts", "pesos", "rank",
   "fat_anual", "instagram", "cpf", "ingresso", "nps_d1", "nps_d2", "nps_d3", "qualificacao_cro",
-  "motivo", ...CAMPOS_EXTRAS.map((c) => c.chave),
+  "motivo", "closer", "quem_confirmou", "closer_manual", "closer_manual_por", "closer_manual_em",
+  ...CAMPOS_EXTRAS.map((c) => c.chave),
 ]);
 
 const linhas = (pares: [string, unknown][]): CampoDetalhe[] =>
