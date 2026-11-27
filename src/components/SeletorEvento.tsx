@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Check, Pencil, Plus, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase/cliente";
 import { SELECT_PROJETO_OFERTA } from "@/lib/consultas";
-import { FAIXAS_PADRAO, PRODUTOS_PADRAO, REGRAS_PADRAO, fmtData } from "@/lib/config";
+import { FAIXAS_PADRAO, PRODUTOS_PADRAO, REGRAS_PADRAO, fmtData, lerValor } from "@/lib/config";
 import type {
   CriterioDesempate,
   Evento,
@@ -213,7 +213,7 @@ function FormEvento({
       return toast("aviso", "A data de fim não pode ser antes da data de início.");
     }
 
-    const meta = parseFloat(metaFaturamento) || 0;
+    const meta = lerValor(metaFaturamento) || 0;
     const metas =
       meta > 0
         ? [{ id: "meta-evento", escopo: "evento", metrica: "faturamento", valor: meta }]
@@ -358,7 +358,7 @@ function FormEvento({
         hint="Aparece no ranking com o quanto falta e a projeção de fechamento."
       >
         <Input
-          type="number"
+          type="text"
           inputMode="decimal"
           value={metaFaturamento}
           onChange={(e) => setMetaFaturamento(e.target.value)}

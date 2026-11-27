@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/cliente";
 import { NOME_DO_CAMPO, vendaParaLinha, type CamposVenda } from "@/lib/consultas";
-import { coordena, fmtPts } from "@/lib/config";
+import { coordena, fmtPts, fmtValExato, lerValor } from "@/lib/config";
 import { calcularPontos, type ContextoVenda } from "@/lib/pontuacao";
 import type { Evento, Usuario, Venda } from "@/lib/types";
 import { Button } from "./ui/button";
@@ -73,9 +73,9 @@ export function EditModal({
 
   const contexto: ContextoVenda = useMemo(
     () => ({
-      valor: parseFloat(valor) || 0,
-      recebido: parseFloat(recebido) || 0,
-      restante: completo ? 0 : parseFloat(restante) || 0,
+      valor: lerValor(valor) || 0,
+      recebido: lerValor(recebido) || 0,
+      restante: completo ? 0 : lerValor(restante) || 0,
       faixaIndex: faixa,
       completo,
       cadeira,
@@ -91,7 +91,7 @@ export function EditModal({
   );
 
   async function salvar() {
-    const v = parseFloat(valor) || 0;
+    const v = lerValor(valor) || 0;
     if (!cliente.trim()) return toast("aviso", "O nome do cliente não pode ficar em branco.");
 
     const campos: Partial<CamposVenda> = {
@@ -214,8 +214,8 @@ export function EditModal({
       <Field label="Data da venda">
         <Input type="date" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} />
       </Field>
-      <Field label="Valor da venda (R$)">
-        <Input type="number" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} />
+      <Field label="Valor da venda (R$)" hint={valor ? `Lido como ${fmtValExato(lerValor(valor))}` : undefined}>
+        <Input type="text" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} />
       </Field>
 
       <div className="my-4 h-px bg-border" />
@@ -234,8 +234,8 @@ export function EditModal({
         />
       </Field>
 
-      <Field label="Valor recebido (R$)">
-        <Input type="number" inputMode="decimal" value={recebido} onChange={(e) => setRecebido(e.target.value)} />
+      <Field label="Valor recebido (R$)" hint={recebido ? `Lido como ${fmtValExato(lerValor(recebido))}` : undefined}>
+        <Input type="text" inputMode="decimal" value={recebido} onChange={(e) => setRecebido(e.target.value)} />
       </Field>
 
       <Field label="Recebimento completo?">
@@ -244,8 +244,8 @@ export function EditModal({
 
       {!completo && (
         <div className="rounded-lg border border-border tint p-3.5">
-          <Field label="Valor restante (R$)">
-            <Input type="number" inputMode="decimal" value={restante} onChange={(e) => setRestante(e.target.value)} />
+          <Field label="Valor restante (R$)" hint={restante ? `Lido como ${fmtValExato(lerValor(restante))}` : undefined}>
+            <Input type="text" inputMode="decimal" value={restante} onChange={(e) => setRestante(e.target.value)} />
           </Field>
           <Field label="Como foi negociado o restante?" className="mb-0">
             <Textarea rows={3} value={negociacao} onChange={(e) => setNegociacao(e.target.value)} />

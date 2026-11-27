@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/cliente";
 import { SELECT_PROJETO_OFERTA } from "@/lib/consultas";
-import { fmtVal } from "@/lib/config";
+import { fmtVal, lerValor } from "@/lib/config";
 import { lerOferta, lerSck, removerSck } from "@/lib/links";
 import type { Projeto, ProjetoOferta } from "@/lib/types";
 import { Badge } from "./ui/badge";
@@ -205,7 +205,7 @@ function NovaOfertaDoProjeto({
         projeto_id: projeto.id,
         oferta: oferta.trim(),
         url: molde,
-        valor: valor ? parseFloat(valor.replace(",", ".")) : null,
+        valor: lerValor(valor) || null,
         condicao: condicao.trim() || null,
         ativo: true,
       },

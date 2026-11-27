@@ -14,6 +14,25 @@ export const fmtVal = (v: number) =>
 export const fmtValExato = (v: number) =>
   "R$ " + (v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+/**
+ * Lê um valor em reais digitado do jeito brasileiro.
+ * "35.964" e "35.964,00" valem 35964 (ponto é milhar); "35964,5" vale 35964,5.
+ * Antes o campo usava parseFloat direto e "35.964" virava R$ 35,96.
+ * Só um ponto seguido de 1 ou 2 dígitos ("35.5", "35.96") é lido como centavos.
+ */
+export function lerValor(txt: string | number | null | undefined): number {
+  if (typeof txt === "number") return Number.isFinite(txt) ? txt : 0;
+  if (!txt) return 0;
+  let limpo = String(txt).replace(/R\$/gi, "").replace(/\s/g, "");
+  if (limpo.includes(",")) {
+    limpo = limpo.replace(/\./g, "").replace(",", ".");
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(limpo)) {
+    limpo = limpo.replace(/\./g, "");
+  }
+  const n = parseFloat(limpo);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export const fmtPts = (n: number) => (n % 1 === 0 ? n.toString() : n.toFixed(1).replace(".", ","));
 
 /** Data pura do banco (YYYY-MM-DD). O meio-dia evita o fuso puxar para o dia anterior. */

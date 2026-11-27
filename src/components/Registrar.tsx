@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase/cliente";
 import { SELECT_INSCRITO, SELECT_LEAD, vendaParaLinha } from "@/lib/consultas";
 import { normalizarEmail, type Inscrito } from "@/lib/analise";
 import { ehMembroMaster, fichaDoInscrito } from "@/lib/participantes";
-import { fmtPts } from "@/lib/config";
+import { fmtPts, fmtValExato, lerValor } from "@/lib/config";
 import { calcularPontos, type ContextoVenda } from "@/lib/pontuacao";
 import type { Evento, Lead, Usuario } from "@/lib/types";
 import { QrScanner } from "./QrScanner";
@@ -51,9 +51,9 @@ export function Registrar({ perfil, evento }: { perfil: Usuario; evento: Evento 
 
   const contexto: ContextoVenda = useMemo(
     () => ({
-      valor: parseFloat(valor) || 0,
-      recebido: parseFloat(recebido) || 0,
-      restante: completo === false ? parseFloat(restante) || 0 : 0,
+      valor: lerValor(valor) || 0,
+      recebido: lerValor(recebido) || 0,
+      restante: completo === false ? lerValor(restante) || 0 : 0,
       faixaIndex: faixa,
       completo,
       cadeira,
@@ -117,7 +117,7 @@ export function Registrar({ perfil, evento }: { perfil: Usuario; evento: Evento 
   async function registrar() {
     if (!evento.id) return toast("aviso", "Cadastre um evento antes de registrar vendas.");
 
-    const v = parseFloat(valor) || 0;
+    const v = lerValor(valor) || 0;
     if (!cliente.trim()) return toast("aviso", "Informe o nome do cliente.");
     if (!v) return toast("aviso", "Informe o valor da venda.");
     // A v1 exigia resposta aqui e vale manter: deixar em branco gravaria "não"
@@ -230,8 +230,8 @@ export function Registrar({ perfil, evento }: { perfil: Usuario; evento: Evento 
           <Field label="Data da venda">
             <Input type="date" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} />
           </Field>
-          <Field label="Valor da venda (R$)">
-            <Input type="number" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0" />
+          <Field label="Valor da venda (R$)" hint={valor ? `Lido como ${fmtValExato(lerValor(valor))}` : undefined}>
+            <Input type="text" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0" />
           </Field>
         </CardContent>
       </Card>
@@ -259,8 +259,8 @@ export function Registrar({ perfil, evento }: { perfil: Usuario; evento: Evento 
             />
           </Field>
 
-          <Field label="Valor recebido (R$)">
-            <Input type="number" inputMode="decimal" value={recebido} onChange={(e) => setRecebido(e.target.value)} placeholder="0" />
+          <Field label="Valor recebido (R$)" hint={recebido ? `Lido como ${fmtValExato(lerValor(recebido))}` : undefined}>
+            <Input type="text" inputMode="decimal" value={recebido} onChange={(e) => setRecebido(e.target.value)} placeholder="0" />
           </Field>
 
           <Field label="Recebimento completo?">
@@ -269,8 +269,8 @@ export function Registrar({ perfil, evento }: { perfil: Usuario; evento: Evento 
 
           {completo === false && (
             <div className="mt-2.5 rounded-lg border border-border tint p-3.5">
-              <Field label="Valor restante (R$)">
-                <Input type="number" inputMode="decimal" value={restante} onChange={(e) => setRestante(e.target.value)} placeholder="0" />
+              <Field label="Valor restante (R$)" hint={restante ? `Lido como ${fmtValExato(lerValor(restante))}` : undefined}>
+                <Input type="text" inputMode="decimal" value={restante} onChange={(e) => setRestante(e.target.value)} placeholder="0" />
               </Field>
               <Field label="Como foi negociado o restante?" className="mb-0">
                 <Textarea rows={3} value={negociacao} onChange={(e) => setNegociacao(e.target.value)} placeholder="Ex: R$ 10.000 via boleto em 30 dias..." />

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Copy, FolderDown, Link2, Plus, Trash2, Wand2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/cliente";
 import { SELECT_LINK, SELECT_PROJETO_OFERTA } from "@/lib/consultas";
-import { fmtVal } from "@/lib/config";
+import { fmtVal, lerValor } from "@/lib/config";
 import {
   gerarLinksDoCatalogo,
   lerOferta,
@@ -617,7 +617,7 @@ function NovaOferta({
       sck: v.sck,
       status: "new",
       oferta: oferta.trim(),
-      valor: valor ? parseFloat(valor.replace(",", ".")) : null,
+      valor: lerValor(valor) || null,
       condicao: condicao.trim() || null,
       url: v.sck ? trocarSck(limpa, v.sck) : removerSck(limpa),
     }));

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Plus, Split, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/cliente";
-import { fmtVal } from "@/lib/config";
+import { fmtVal, lerValor } from "@/lib/config";
 import {
   FORMAS,
   diferenca,
@@ -517,15 +517,8 @@ function novaParcela(): Parcela {
   return { valor: 0, forma: "PIX", quando: "data", data: "" };
 }
 
-/** Aceita "10.000,00" e "10000.00": o promotor digita do jeito dele. */
-function numero(txt: string | number | undefined): number {
-  if (typeof txt === "number") return txt;
-  if (!txt) return 0;
-  let limpo = String(txt).trim().replace(/\s/g, "");
-  if (limpo.includes(",")) limpo = limpo.replace(/\./g, "").replace(",", ".");
-  const n = parseFloat(limpo);
-  return Number.isFinite(n) ? n : 0;
-}
+/** Aceita "10.000,00", "10.000" e "10000.00": o promotor digita do jeito dele. */
+const numero = lerValor;
 
 /** Campo editável: 0 aparece vazio, para o promotor não ter que apagar. */
 const campoNum = (n: number | undefined) => (n ? String(n) : "");
