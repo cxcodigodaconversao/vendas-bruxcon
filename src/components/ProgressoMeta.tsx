@@ -26,6 +26,63 @@ function medir(vendas: Venda[], metrica: MetricaMeta): number {
   }
 }
 
+/**
+ * Curva de conversão de um evento: a venda acontece nos 2 últimos dias.
+ * No 1º dia de conversão entra ~30% do total; no 2º, ~70%. Ritmo linear
+ * (vendido ÷ dias passados × dias do evento) erra feio nessa curva.
+ */
+const CURVA_CONVERSAO = [0.3, 0.7];
+
+/** Dia da venda no fuso de Brasília (YYYY-MM-DD). */
+const diaBR = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+const diaDaVenda = (v: Venda) => v.dataVenda || diaBR(v.criadoEm);
+
+/** Lista os dias YYYY-MM-DD de inicio até fim. */
+function diasDoEvento(inicio: string, fim: string): string[] {
+  const dias: string[] = [];
+  const d = new Date(inicio + "T12:00:00Z");
+  const ultimo = new Date(fim + "T12:00:00Z");
+  while (d <= ultimo && dias.length < 60) {
+    dias.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return dias;
+}
+
+/**
+ * Projeção de fechamento pela curva de conversão.
+ * · Antes dos dias de conversão: sem projeção.
+ * · 1º dia de conversão: vendido ÷ 30%.
+ * · 2º dia: o 1º dia continua valendo 30% do total; se o 2º já passou do
+ *   esperado, a projeção acompanha o que entrou de fato.
+ */
+function projetar(
+  vendas: Venda[],
+  metrica: MetricaMeta,
+  inicio: string | null,
+  fim: string | null
+): number | null {
+  if (!inicio || !fim) return null;
+  const dias = diasDoEvento(inicio, fim);
+  const curva = dias.length >= CURVA_CONVERSAO.length ? CURVA_CONVERSAO : [1];
+  const conversao = dias.slice(-curva.length);
+  const hoje = diaBR(new Date().toISOString());
+  const idx = conversao.indexOf(hoje);
+  if (idx < 0) return null; // fora dos dias de conversão
+
+  const atual = medir(vendas, metrica);
+  if (idx === 0) return atual / curva[0];
+
+  // 2º dia: o que entrou nos dias anteriores de conversão projeta o total.
+  const anteriores = conversao.slice(0, idx);
+  const fatiaAnterior = curva.slice(0, idx).reduce((a, b) => a + b, 0);
+  const vendidoAntes = medir(
+    vendas.filter((v) => diaDaVenda(v) <= anteriores[anteriores.length - 1]),
+    metrica
+  );
+  return Math.max(atual, vendidoAntes / fatiaAnterior);
+}
+
 const formatar = (n: number, m: MetricaMeta) =>
   m === "vendas" ? String(n) : m === "pontos" ? fmtPts(n) : fmtVal(n);
 
@@ -45,19 +102,7 @@ export function ProgressoMeta({ evento, vendas }: { evento: Evento; vendas: Vend
     const pct = meta.valor > 0 ? Math.min(100, Math.round((atual / meta.valor) * 100)) : 0;
     const gap = Math.max(0, meta.valor - atual);
 
-    // Projeção só faz sentido com o evento em andamento e com datas definidas.
-    let projecao: number | null = null;
-    if (evento.dataInicio && evento.dataFim) {
-      const dia = 86_400_000;
-      const inicio = new Date(evento.dataInicio + "T00:00:00").getTime();
-      const fim = new Date(evento.dataFim + "T23:59:59").getTime();
-      const agora = Date.now();
-      if (agora > inicio && agora < fim) {
-        const decorridos = Math.max(1, Math.ceil((agora - inicio) / dia));
-        const totais = Math.max(1, Math.ceil((fim - inicio) / dia));
-        projecao = (atual / decorridos) * totais;
-      }
-    }
+    const projecao = projetar(vendas, meta.metrica, evento.dataInicio, evento.dataFim);
 
     return { atual, pct, gap, projecao, batida: atual >= meta.valor };
   }, [meta, vendas, evento.dataInicio, evento.dataFim]);
@@ -110,7 +155,7 @@ export function ProgressoMeta({ evento, vendas }: { evento: Evento; vendas: Vend
           {dados.projecao !== null && (
             <span className="flex items-center gap-1 text-muted-foreground">
               <TrendingUp className="h-3.5 w-3.5" />
-              Neste ritmo, fecha em{" "}
+              Projeção de fechamento{" "}
               <strong className="num font-medium text-foreground">
                 {formatar(Math.round(dados.projecao), meta.metrica)}
               </strong>
